@@ -1,0 +1,72 @@
+{
+  "agency": {
+    "name": "Ủy ban Mặt trận Tổ quốc Việt Nam Xã Ea Súp",
+    "location": "Xã Ea Súp, Tỉnh Đắk Lắk",
+    "hotline": "0262.3688.115",
+    "email": "mttq.easup@daklak.gov.vn",
+    "portal": "Cổng tiếp nhận ý kiến & Trả lời cử tri"
+  },
+  "villages": [
+    { "id": 1, "code": "BUON_A", "name": "Buôn A", "type": "Buôn", "order": 1 },
+    { "id": 2, "code": "BUON_B", "name": "Buôn B", "type": "Buôn", "order": 2 },
+    { "id": 3, "code": "BUON_C", "name": "Buôn C", "type": "Buôn", "order": 3 },
+    { "id": 4, "code": "THON_THANH_CONG", "name": "Thôn Thành Công", "type": "Thôn", "order": 4 },
+    { "id": 5, "code": "THON_HOA_BINH", "name": "Thôn Hòa Bình", "type": "Thôn", "order": 5 },
+    { "id": 6, "code": "THON_DOAN_KET", "name": "Thôn Đoàn Kết", "type": "Thôn", "order": 6 },
+    { "id": 7, "code": "THON_BINH_LOI", "name": "Thôn Bình Lợi", "type": "Thôn", "order": 7 },
+    { "id": 8, "code": "THON_1", "name": "Thôn 1", "type": "Thôn", "order": 8 },
+    { "id": 9, "code": "THON_2", "name": "Thôn 2", "type": "Thôn", "order": 9 },
+    { "id": 10, "code": "THON_3", "name": "Thôn 3", "type": "Thôn", "order": 10 },
+    { "id": 11, "code": "THON_4", "name": "Thôn 4", "type": "Thôn", "order": 11 },
+    { "id": 12, "code": "THON_5", "name": "Thôn 5", "type": "Thôn", "order": 12 },
+    { "id": 13, "code": "THON_6", "name": "Thôn 6", "type": "Thôn", "order": 13 },
+    { "id": 14, "code": "THON_7", "name": "Thôn 7", "type": "Thôn", "order": 14 },
+    { "id": 15, "code": "THON_8", "name": "Thôn 8", "type": "Thôn", "order": 15 },
+    { "id": 16, "code": "THON_9", "name": "Thôn 9", "type": "Thôn", "order": 16 },
+    { "id": 17, "code": "THON_10", "name": "Thôn 10", "type": "Thôn", "order": 17 },
+    { "id": 18, "code": "THON_11", "name": "Thôn 11", "type": "Thôn", "order": 18 },
+    { "id": 19, "code": "THON_12", "name": "Thôn 12", "type": "Thôn", "order": 19 },
+    { "id": 20, "code": "THON_13", "name": "Thôn 13", "type": "Thôn", "order": 20 }
+  ],
+  "categories": [
+    { "id": 1, "name": "Đất đai, bồi thường & giải tỏa mặt bằng" },
+    { "id": 2, "name": "Đường giao thông nông thôn, kênh mương thủy lợi" },
+    { "id": 3, "name": "Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt" },
+    { "id": 4, "name": "An ninh trật tự thôn xóm, phòng chống tệ nạn" },
+    { "id": 5, "name": "Chế độ chính sách, hỗ trợ hộ nghèo, đại đoàn kết" },
+    { "id": 6, "name": "Tinh thần phục vụ & Thủ tục hành chính" },
+    { "id": 7, "name": "Lĩnh vực khác" }
+  ],
+  "feedbacks": [
+    {
+      "id": 1,
+      "ticket_code": "EASUP-PA-892415",
+      "sender_name": "Trần Văn Mạnh",
+      "sender_phone": "0913845***",
+      "village_name": "Buôn A",
+      "category_name": "Đường giao thông nông thôn, kênh mương thủy lợi",
+      "title": "Kiến nghị sửa chữa dặm vá tuyến đường liên thôn qua Buôn A",
+      "content": "Tuyến đường nội bộ qua Buôn A xuất hiện nhiều ổ gà sau các trận mưa lớn, gây khó khăn cho việc đi lại của bà con và học sinh.",
+      "attachments": [],
+      "status_code": "COMPLETED",
+      "status_label": "Đã hoàn tất xử lý",
+      "response_content": "UBND xã Ea Súp đã tiến hành khảo sát thực địa và phân bổ nguồn kinh phí duy tu đường giao thông nông thôn, dự kiến hoàn tất dặm vá trong tháng 9/2026.",
+      "created_at": "2026-08-20T08:15:00Z"
+    },
+    {
+      "id": 2,
+      "ticket_code": "EASUP-PA-671239",
+      "sender_name": "Nguyễn Thị Lành",
+      "sender_phone": "0988123***",
+      "village_name": "Thôn Thành Công",
+      "category_name": "Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt",
+      "title": "Phản ánh điểm tập kết rác thải tự phát gần khu dân cư Thôn Thành Công",
+      "content": "Thời gian gần đây có một số hộ tập kết rác sai quy định bốc mùi hôi thối, đề nghị Ban MTTQ và chính quyền có biện pháp tuyên truyền, xử lý.",
+      "attachments": [],
+      "status_code": "PROCESSING",
+      "status_label": "Đang thẩm tra, xử lý",
+      "response_content": "Ủy ban MTTQ xã đã gửi văn bản đề nghị Tổ quản lý trật tự & môi trường xã phối hợp cùng Ban Tự quản Thôn Thành Công kiểm tra, thu gom rác trong 48 giờ tới.",
+      "created_at": "2026-08-22T14:20:00Z"
+    }
+  ]
+}

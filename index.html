@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ủy Ban Mặt Trận Tổ Quốc Việt Nam Xã Ea Súp - Cổng Thông Tin & Trả Lời Cử Tri</title>
+  <meta name="description" content="Cổng thông tin tiếp nhận ý kiến, kiến nghị, phản ánh cử tri và hỗ trợ giải đáp trực tuyến bằng Trợ lý AI của Mặt trận Tổ quốc Việt Nam xã Ea Súp, tỉnh Đắk Lắk.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="logo.png">
+  
+  <!-- CSS Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-container">
+      <div class="topbar-left">
+        <div class="topbar-item">
+          <span>🏛️ Cổng thông tin điện tử Đảng bộ & MTTQ Xã Ea Súp</span>
+        </div>
+        <div class="topbar-item">
+          <span>🕒 <span id="live-clock">Đang tải...</span></span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-item">
+          <span>📞 Đường dây nóng: <strong>0262.3688.115</strong></span>
+        </div>
+        <div class="topbar-item">
+          <span>✉️ Email: <strong>mttq.easup@daklak.gov.vn</strong></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN HEADER -->
+  <nav class="site-header" id="header">
+    <div class="header-container">
+      <div class="brand-wrapper">
+        <!-- Logo Biểu trưng Mặt trận Tổ quốc Việt Nam từ Google Drive -->
+        <img src="logo.png" onerror="this.onerror=null; this.src='https://lh3.googleusercontent.com/d/1jxBkYmFQw7WcBqpI2svoSaiQP-62Bf8f';" alt="Biểu trưng Mặt trận Tổ quốc Việt Nam" class="emblem-logo">
+        <div class="brand-text">
+          <h1>Ủy Ban Mặt Trận Tổ Quốc Việt Nam</h1>
+          <p>XÃ EA SÚP • TỈNH ĐẮK LẮK</p>
+        </div>
+      </div>
+
+      <div class="main-nav">
+        <a href="#trang-chu" class="nav-link active">Trang chủ</a>
+        <a href="#gui-phan-anh" class="nav-link">Gửi phản ánh</a>
+        <a href="#tra-cuu" class="nav-link">Tra cứu tiến độ</a>
+        <a href="#quy-trinh" class="nav-link">Quy trình xử lý</a>
+        <a href="#faq" class="nav-link">Hỏi - Đáp cử tri</a>
+        <button type="button" class="btn-nav-admin" id="btn-open-admin">
+          📊 Cán bộ Tiếp nhận
+        </button>
+        <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" class="nav-link btn-nav-ai">
+          🤖 Trợ lý AI Cử tri
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="hero-section" id="trang-chu">
+    <div class="hero-pattern"></div>
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="hero-tag">
+          ⭐ Lắng nghe dân - Tận tụy phục vụ nhân dân
+        </div>
+        <h2 class="hero-title">
+          CỔNG TIẾP NHẬN Ý KIẾN & <span>TRẢ LỜI CỬ TRI XÃ EA SÚP</span>
+        </h2>
+        <p class="hero-desc">
+          Nơi tiếp nhận tâm tư, nguyện vọng, kiến nghị và phản ánh chính đáng của cử tri và nhân dân xã Ea Súp, tỉnh Đắk Lắk. Ứng dụng công nghệ Trợ lý Trí tuệ nhân tạo (AI) giúp giải đáp thủ tục hành chính, chính sách pháp luật 24/7.
+        </p>
+
+        <div class="hero-actions">
+          <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" class="btn btn-gold" id="btn-hero-ai">
+            <span>🤖 Trò chuyện với Trợ lý AI Cử tri</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#gui-phan-anh" class="btn btn-outline-light">
+            <span>✍️ Gửi phản ánh / Kiến nghị</span>
+          </a>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-card">
+            <div class="stat-number">1.450+</div>
+            <div class="stat-label">Ý kiến tiếp nhận</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">99.2%</div>
+            <div class="stat-label">Tỷ lệ giải quyết</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Hỗ trợ trực tuyến</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI HIGHLIGHT CARD -->
+      <div class="hero-ai-card">
+        <div class="ai-card-header">
+          <div class="ai-avatar-pulse">
+            🤖
+          </div>
+          <div class="ai-card-title">
+            <h3>Trợ Lý Trí Tuệ Nhân Tạo AI</h3>
+            <span>Đang trực tuyến sẵn sàng</span>
+          </div>
+        </div>
+        <p style="font-size:0.88rem; color:#4B5563; margin-bottom:14px;">
+          Bấm vào các câu hỏi gợi ý bên dưới hoặc bấm nút để trò chuyện trực tiếp:
+        </p>
+        <div class="ai-prompt-list">
+          <div class="ai-prompt-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+            <span>Quy trình hỗ trợ xây dựng nhà Đại Đoàn Kết tại xã Ea Súp?</span>
+          </div>
+          <div class="ai-prompt-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+            <span>Lịch tiếp công dân định kỳ của UBMTTQ xã Ea Súp?</span>
+          </div>
+          <div class="ai-prompt-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+            <span>Thủ tục xác nhận chính sách hỗ trợ sản xuất nông nghiệp?</span>
+          </div>
+        </div>
+        <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" class="btn btn-gold" style="width:100%; text-align:center;">
+          🚀 Mở Trò Chuyện Chatbot ChatGPT
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="main-content">
+    
+    <!-- FEEDBACK FORM SECTION (WITH OPTIONAL FILE UPLOAD) -->
+    <section id="gui-phan-anh" class="form-card-wrapper">
+      <div class="form-header-bar">
+        <h2>
+          <span>✍️</span> TIẾP NHẬN Ý KIẾN, KIẾN NGHỊ VÀ PHẢN ÁNH CỦA CỬ TRI
+        </h2>
+        <div class="form-badge-security">
+          🔒 Bảo mật thông tin người phản ánh
+        </div>
+      </div>
+
+      <form id="feedback-form" class="feedback-form">
+        <div class="form-grid">
+          
+          <!-- Họ và tên -->
+          <div class="form-group">
+            <label class="form-label" for="sender-name">
+              Họ và tên cử tri:
+              <span class="badge-optional">Không bắt buộc</span>
+            </label>
+            <input type="text" id="sender-name" class="form-input" placeholder="Ví dụ: Nguyễn Văn A (Để trống nếu muốn ẩn danh)">
+          </div>
+
+          <!-- Số điện thoại -->
+          <div class="form-group">
+            <label class="form-label" for="sender-phone">
+              Số điện thoại liên hệ:
+              <span class="badge-optional">Không bắt buộc</span>
+            </label>
+            <input type="tel" id="sender-phone" class="form-input" placeholder="Ví dụ: 0912.xxx.xxx (để nhận tin nhắn kết quả)">
+          </div>
+
+          <!-- Thôn / Buôn -->
+          <div class="form-group">
+            <label class="form-label" for="sender-village">
+              Địa bàn Thôn / Buôn: <span class="required-star">*</span>
+            </label>
+            <select id="sender-village" class="form-select" required>
+              <option value="">-- Chọn Thôn / Buôn tại xã Ea Súp --</option>
+              <option value="Buôn A">Buôn A</option>
+              <option value="Buôn B">Buôn B</option>
+              <option value="Buôn C">Buôn C</option>
+              <option value="Thôn Thành Công">Thôn Thành Công</option>
+              <option value="Thôn Hòa Bình">Thôn Hòa Bình</option>
+              <option value="Thôn Đoàn Kết">Thôn Đoàn Kết</option>
+              <option value="Thôn Bình Lợi">Thôn Bình Lợi</option>
+              <option value="Thôn 1">Thôn 1</option>
+              <option value="Thôn 2">Thôn 2</option>
+              <option value="Thôn 3">Thôn 3</option>
+              <option value="Thôn 4">Thôn 4</option>
+              <option value="Thôn 5">Thôn 5</option>
+              <option value="Thôn 6">Thôn 6</option>
+              <option value="Thôn 7">Thôn 7</option>
+              <option value="Thôn 8">Thôn 8</option>
+              <option value="Thôn 9">Thôn 9</option>
+              <option value="Thôn 10">Thôn 10</option>
+              <option value="Thôn 11">Thôn 11</option>
+              <option value="Thôn 12">Thôn 12</option>
+              <option value="Thôn 13">Thôn 13</option>
+            </select>
+          </div>
+
+          <!-- Lĩnh vực phản ánh -->
+          <div class="form-group">
+            <label class="form-label" for="feedback-category">
+              Lĩnh vực phản ánh: <span class="required-star">*</span>
+            </label>
+            <select id="feedback-category" class="form-select" required>
+              <option value="Đất đai & Địa chính">1. Đất đai, bồi thường & giải tỏa mặt bằng</option>
+              <option value="Hạ tầng giao thông, thuỷ lợi">2. Đường giao thông nông thôn, kênh mương thủy lợi</option>
+              <option value="Vệ sinh môi trường & Rác thải">3. Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt</option>
+              <option value="An ninh trật tự & An toàn xã hội">4. An ninh trật tự thôn xóm, phòng chống tệ nạn</option>
+              <option value="Chính sách an sinh & Hộ nghèo">5. Chế độ chính sách, hỗ trợ hộ nghèo, đại đoàn kết</option>
+              <option value="Cải cách hành chính & Thái độ cán bộ">6. Tinh thần phục vụ & Thủ tục hành chính</option>
+              <option value="Lĩnh vực khác">7. Lĩnh vực khác</option>
+            </select>
+          </div>
+
+          <!-- Tiêu đề -->
+          <div class="form-group full-width">
+            <label class="form-label" for="feedback-title">
+              Tiêu đề phản ánh / kiến nghị: <span class="required-star">*</span>
+            </label>
+            <input type="text" id="feedback-title" class="form-input" placeholder="Tóm tắt ngắn gọn nội dung kiến nghị..." required>
+          </div>
+
+          <!-- Nội dung chi tiết -->
+          <div class="form-group full-width">
+            <label class="form-label" for="feedback-content">
+              Nội dung phản ánh chi tiết: <span class="required-star">*</span>
+            </label>
+            <textarea id="feedback-content" class="form-textarea" placeholder="Mô tả cụ thể thời gian, địa điểm, sự việc hoặc kiến nghị của cử tri để cơ quan Mặt trận và chính quyền xác minh xử lý..." required></textarea>
+          </div>
+
+          <!-- ============================================== -->
+          <!-- KHU VỰC UPLOAD FILE ĐÍNH KÈM (KHÔNG BẮT BUỘC) -->
+          <!-- ============================================== -->
+          <div class="form-group full-width">
+            <label class="form-label">
+              <span>📎 Tài liệu / Hình ảnh đính kèm:</span>
+              <span class="badge-optional" style="background:#FEF3C7; color:#B45309; border-color:#FDE68A; font-weight:700;">Không bắt buộc (Tùy chọn)</span>
+            </label>
+
+            <!-- Vùng kéo thả & Nút bấm Upload -->
+            <div class="upload-wrapper" id="upload-wrapper">
+              <input type="file" id="file-input" class="file-input-hidden" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
+              <div class="upload-icon-container">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </div>
+              <div class="upload-main-text">
+                Kéo và thả tệp tin vào đây hoặc
+              </div>
+              <div class="upload-sub-text">
+                Định dạng hỗ trợ: <strong>Hình ảnh (JPG, PNG), Tài liệu (PDF, Word, Excel)</strong> • Tối đa 5 tệp • Dung lượng &lt; 15MB/tệp
+              </div>
+              <button type="button" class="upload-btn-trigger" id="upload-btn-trigger">
+                <span>📁 Chọn tệp từ máy tính / điện thoại</span>
+              </button>
+            </div>
+
+            <!-- Danh sách các tệp đã được đính kèm -->
+            <div class="attached-files-container" id="attached-files-container"></div>
+          </div>
+          <!-- ============================================== -->
+
+        </div>
+
+        <!-- Cam kết & Nút Gửi -->
+        <div class="form-footer-actions">
+          <label class="checkbox-label">
+            <input type="checkbox" id="agree-terms" required checked>
+            <span>Tôi cam kết thông tin và nội dung phản ánh trên là trung thực và đúng sự thật.</span>
+          </label>
+
+          <button type="submit" class="btn btn-submit-feedback">
+            <span>📤 Gửi Ý Kiến / Phản Ánh</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- TRA CỨU TIẾN ĐỘ XỬ LÝ -->
+    <section id="tra-cuu" class="lookup-box">
+      <div class="section-header" style="margin-bottom:20px;">
+        <span class="section-subtitle">🔍 Công khai & Minh bạch</span>
+        <h3 class="section-title">Tra cứu <span>Tiến độ xử lý phản ánh</span></h3>
+        <p class="section-desc">Nhập mã hồ sơ đã được cấp khi gửi phản ánh để theo dõi quá trình tiếp nhận, chuyển cơ quan và kết quả giải quyết.</p>
+      </div>
+
+      <div class="lookup-input-group">
+        <input type="text" id="lookup-code-input" class="lookup-input" placeholder="Nhập mã hồ sơ (Ví dụ: EASUP-PA-892415)...">
+        <button type="button" id="btn-lookup" class="btn btn-lookup">Tra cứu ngay</button>
+      </div>
+
+      <div class="quick-sample-codes">
+        <span>Mã mẫu thử nghiệm:</span>
+        <span class="sample-code-tag" data-code="EASUP-PA-892415">EASUP-PA-892415 (Đã hoàn tất)</span> | 
+        <span class="sample-code-tag" data-code="EASUP-PA-671239">EASUP-PA-671239 (Đang xử lý)</span>
+      </div>
+
+      <div class="lookup-result-box" id="lookup-result-box"></div>
+    </section>
+
+    <!-- QUY TRÌNH TIẾP NHẬN VÀ XỬ LÝ (4 BƯỚC) -->
+    <section id="quy-trinh">
+      <div class="section-header">
+        <span class="section-subtitle">📋 Quy trình chuẩn</span>
+        <h3 class="section-title">4 Bước Tiếp Nhận & <span>Xử Lý Ý Kiến Cử Tri</span></h3>
+        <p class="section-desc">Quy trình công khai, rõ ràng nhằm đảm bảo mọi ý kiến của cử tri đều được lắng nghe và phản hồi kịp thời.</p>
+      </div>
+
+      <div class="workflow-grid">
+        <div class="workflow-card">
+          <div class="step-badge">1</div>
+          <h3>Tiếp nhận ý kiến</h3>
+          <p>Mặt trận Tổ quốc tiếp nhận qua Cổng điện tử, Chatbot AI hoặc tại các hội nghị tiếp xúc cử tri trên địa bàn xã.</p>
+        </div>
+
+        <div class="workflow-card">
+          <div class="step-badge">2</div>
+          <h3>Phân loại & Thẩm tra</h3>
+          <p>Ban Thường trực kiểm tra nội dung, hình ảnh/tài liệu đính kèm, phân loại thuộc thẩm quyền xã hoặc tỉnh.</p>
+        </div>
+
+        <div class="workflow-card">
+          <div class="step-badge">3</div>
+          <h3>Chuyển giải quyết</h3>
+          <p>Ban hành văn bản kiến nghị gửi UBND xã hoặc các cơ quan chức năng tiến hành kiểm tra thực tế và xử lý.</p>
+        </div>
+
+        <div class="workflow-card">
+          <div class="step-badge">4</div>
+          <h3>Trả lời & Công khai</h3>
+          <p>Thông báo kết quả giải quyết cho cử tri qua SMS/Cổng thông tin và niêm yết công khai tại trụ sở.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ SECTION -->
+    <section id="faq">
+      <div class="section-header">
+        <span class="section-subtitle">❓ Giải đáp thắc mắc</span>
+        <h3 class="section-title">Câu Hỏi Cử Tri <span>Thường Gặp</span></h3>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-item active">
+          <div class="faq-question">
+            <span>1. Tôi có thể gửi phản ánh mà không đính kèm file hình ảnh/tài liệu không?</span>
+            <span class="faq-icon-arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            <strong>Có.</strong> Tính năng đính kèm tệp là hoàn toàn <strong>không bắt buộc</strong>. Bạn chỉ cần điền đầy đủ tiêu đề và nội dung phản ánh là có thể gửi thành công. Tuy nhiên, nếu có hình ảnh hiện trường hoặc tài liệu kèm theo, việc xác minh và xử lý sẽ nhanh chóng và chính xác hơn.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>2. Thông tin cá nhân của tôi có được bảo mật khi gửi phản ánh không?</span>
+            <span class="faq-icon-arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            Ban Thường trực Ủy ban MTTQ Việt Nam xã Ea Súp cam kết bảo mật tuyệt đối danh tính, số điện thoại và thông tin cá nhân của người phản ánh theo quy định của pháp luật. Bạn cũng có thể chọn chế độ gửi ẩn danh nếu muốn.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>3. Thời gian xử lý và trả lời một ý kiến phản ánh là bao lâu?</span>
+            <span class="faq-icon-arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            Đối với các kiến nghị thuộc thẩm quyền cấp xã, thời gian xử lý và trả lời từ 03 - 07 ngày làm việc. Đối với các vấn đề phức tạp cần kiểm tra liên ngành, thời gian tối đa không quá 15 ngày làm việc.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>4. Trợ lý AI Cử tri có thể giải đáp những thông tin gì?</span>
+            <span class="faq-icon-arrow">▼</span>
+          </div>
+          <div class="faq-answer">
+            Trợ lý AI được đào tạo để hỗ trợ tra cứu các thủ tục hành chính công (đất đai, hộ tịch, bảo hiểm y tế), các chính sách hỗ trợ hộ nghèo, quy chế dân chủ cơ sở và các văn bản pháp luật hiện hành 24/7.
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL SUCCESS POPUP -->
+  <div class="modal-overlay" id="success-modal">
+    <div class="modal-container">
+      <div class="modal-icon-success">
+        ✓
+      </div>
+      <h3 class="modal-title">GỬI PHẢN ÁNH THÀNH CÔNG!</h3>
+      <p class="modal-message">
+        Ủy ban MTTQ Việt Nam xã Ea Súp đã tiếp nhận ý kiến của bạn và sẽ tiến hành phân loại, xác minh xử lý trong thời gian sớm nhất.
+      </p>
+
+      <div class="modal-ticket-box">
+        <div class="ticket-label">MÃ TIẾP NHẬN HỒ SƠ:</div>
+        <div class="ticket-code" id="modal-ticket-code">EASUP-PA-892415</div>
+        <div class="ticket-summary" id="modal-ticket-details" style="margin-top:8px; line-height:1.6; text-align:left;">
+          <!-- Chi tiết hiển thị động -->
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-gold" id="btn-copy-ticket">
+          📋 Sao chép mã tra cứu
+        </button>
+        <button type="button" class="btn btn-outline-light" id="btn-close-modal" style="color:var(--color-text-main); border-color:#D1D5DB; background:#F3F4F6;">
+          Đóng cửa sổ
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SITE FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <h4>ỦY BAN MẶT TRẬN TỔ QUỐC VIỆT NAM XÃ EA SÚP</h4>
+        <div class="footer-info-item">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <span>Trụ sở: Trung tâm hành chính xã Ea Súp, Tỉnh Đắk Lắk</span>
+        </div>
+        <div class="footer-info-item">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+          <span>Điện thoại: <strong>0262.3688.115</strong> • Hotline tiếp dân: <strong>0982.xxx.xxx</strong></span>
+        </div>
+        <div class="footer-info-item">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+          <span>Hộp thư điện tử: <strong>mttq.easup@daklak.gov.vn</strong></span>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <h4>LIÊN KẾT NHANH</h4>
+        <ul style="list-style:none; line-height:2.2; font-size:0.9rem;">
+          <li><a href="#trang-chu" style="color:#D1D5DB;">› Trang chủ</a></li>
+          <li><a href="#gui-phan-anh" style="color:#D1D5DB;">› Tiếp nhận phản ánh cử tri</a></li>
+          <li><a href="#tra-cuu" style="color:#D1D5DB;">› Tra cứu tiến độ hồ sơ</a></li>
+          <li><a href="javascript:void(0)" id="footer-btn-admin" style="color:#FCD34D;">› 📊 Bảng quản lý tiếp nhận</a></li>
+          <li><a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" style="color:#FFB81C; font-weight:700;">› 🤖 Trợ lý AI Cử tri</a></li>
+          <li><a href="https://cu-tri-phan-anh.vercel.app/" target="_blank" rel="noopener noreferrer" style="color:#D1D5DB;">› Cổng phản ánh trực tuyến Vercel</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>THỜI GIAN LÀM VIỆC</h4>
+        <p style="font-size:0.88rem; color:#9CA3AF; line-height:1.8;">
+          • Thứ Hai - Thứ Sáu: 07h00 - 11h30, 13h30 - 17h00<br>
+          • Tiếp công dân định kỳ: Thứ Năm hàng tuần<br>
+          • Cổng phản ánh & Trợ lý AI: <strong>Tiếp nhận 24/7</strong>
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>© 2026 Bản quyền thuộc Ủy ban Mặt trận Tổ quốc Việt Nam Xã Ea Súp, Tỉnh Đắk Lắk.</p>
+    </div>
+  </footer>
+
+  <!-- ============================================================ -->
+  <!-- ADMIN / OFFICER DASHBOARD MODAL                              -->
+  <!-- ============================================================ -->
+  <div class="modal-overlay" id="admin-modal">
+    <div class="admin-modal-container">
+      <div class="admin-header">
+        <h3>
+          <span>📊</span> BẢNG QUẢN LÝ TIẾP NHẬN & XỬ LÝ Ý KIẾN CỬ TRI
+        </h3>
+        <button type="button" id="btn-close-admin" style="background:transparent; color:#FFFFFF; font-size:1.5rem; line-height:1;">✕</button>
+      </div>
+
+      <!-- Toolbar: Filter & Export -->
+      <div class="admin-toolbar">
+        <div class="admin-filter-group">
+          <input type="text" id="admin-search-text" class="admin-search-input" placeholder="🔍 Tìm theo mã hồ sơ, tên, nội dung...">
+          
+          <select id="admin-filter-village" class="admin-select">
+            <option value="">-- Tất cả 20 Thôn / Buôn --</option>
+            <option value="Buôn A">Buôn A</option>
+            <option value="Buôn B">Buôn B</option>
+            <option value="Buôn C">Buôn C</option>
+            <option value="Thôn Thành Công">Thôn Thành Công</option>
+            <option value="Thôn Hòa Bình">Thôn Hòa Bình</option>
+            <option value="Thôn Đoàn Kết">Thôn Đoàn Kết</option>
+            <option value="Thôn Bình Lợi">Thôn Bình Lợi</option>
+            <option value="Thôn 1">Thôn 1</option>
+            <option value="Thôn 2">Thôn 2</option>
+            <option value="Thôn 3">Thôn 3</option>
+            <option value="Thôn 4">Thôn 4</option>
+            <option value="Thôn 5">Thôn 5</option>
+            <option value="Thôn 6">Thôn 6</option>
+            <option value="Thôn 7">Thôn 7</option>
+            <option value="Thôn 8">Thôn 8</option>
+            <option value="Thôn 9">Thôn 9</option>
+            <option value="Thôn 10">Thôn 10</option>
+            <option value="Thôn 11">Thôn 11</option>
+            <option value="Thôn 12">Thôn 12</option>
+            <option value="Thôn 13">Thôn 13</option>
+          </select>
+
+          <select id="admin-filter-status" class="admin-select">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="RECEIVED">Mới tiếp nhận</option>
+            <option value="PROCESSING">Đang thẩm tra, xử lý</option>
+            <option value="COMPLETED">Đã hoàn tất xử lý</option>
+          </select>
+        </div>
+
+        <div class="admin-actions-group">
+          <button type="button" class="btn-export" id="btn-export-excel">
+            📥 Xuất Excel (CSV)
+          </button>
+          <button type="button" class="btn-export" id="btn-export-json" style="background:#4B5563;">
+            💾 Xuất JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Google Sheets Auto-Sync Bar -->
+      <div style="background:#ECFDF5; border-bottom:1px solid #A7F3D0; padding:10px 24px; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px; color:#065F46;">
+          <span style="font-size:1.1rem;">📊</span>
+          <strong>Google Sheets Tự Động:</strong>
+          <span>Đích nhận: <code style="background:#D1FAE5; padding:2px 6px; border-radius:4px; font-weight:700;">lehanhkt01@gmail.com</code></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <input type="url" id="input-gsheet-url" placeholder="Dán URL Web App (https://script.google.com/macros/s/.../exec)..." style="padding:5px 10px; font-size:0.82rem; border:1px solid #6EE7B7; border-radius:4px; width:310px;">
+          <button type="button" id="btn-save-gsheet-url" style="background:#059669; color:#FFFFFF; padding:5px 12px; border-radius:4px; font-size:0.82rem; font-weight:600;">💾 Lưu Kết Nối</button>
+          <button type="button" id="btn-test-gsheet" style="background:#2563EB; color:#FFFFFF; padding:5px 12px; border-radius:4px; font-size:0.82rem; font-weight:600;">🧪 Gửi Dòng Thử Nghiệm</button>
+        </div>
+      </div>
+
+      <!-- Table View -->
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th style="width: 140px;">Mã hồ sơ</th>
+              <th>Người gửi & Thôn/Buôn</th>
+              <th>Tiêu đề phản ánh</th>
+              <th style="width: 70px;">Tệp</th>
+              <th style="width: 140px;">Trạng thái</th>
+              <th style="width: 100px;">Ngày gửi</th>
+              <th style="width: 90px; text-align:center;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="admin-table-body">
+            <!-- Render động từ EaSupDB -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN DETAIL / EDIT STATUS MODAL -->
+  <div class="modal-overlay" id="admin-detail-modal" style="z-index: 1001;">
+    <div class="modal-container" style="max-width: 650px; text-align:left;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E5E7EB; padding-bottom:10px;">
+        <h3 style="color:var(--primary-red); font-size:1.2rem; font-weight:700;">
+          CHI TIẾT & XỬ LÝ HỒ SƠ PHẢN ÁNH
+        </h3>
+        <button type="button" id="btn-close-detail" style="background:none; font-size:1.3rem;">✕</button>
+      </div>
+
+      <div id="admin-detail-content" style="font-size:0.9rem; line-height:1.6; margin-bottom:18px;">
+        <!-- Chi tiết phản ánh -->
+      </div>
+
+      <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:16px; margin-bottom:18px;">
+        <h4 style="font-size:0.95rem; margin-bottom:10px; color:#1E293B;">Cập nhật tiến độ & Phản hồi cử tri:</h4>
+        
+        <div style="margin-bottom:12px;">
+          <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:4px;">Trạng thái xử lý:</label>
+          <select id="edit-status-select" class="form-select" style="padding:8px 12px; font-size:0.9rem;">
+            <option value="RECEIVED">1. Mới tiếp nhận hồ sơ</option>
+            <option value="PROCESSING">2. Đang thẩm tra, xác minh & xử lý</option>
+            <option value="COMPLETED">3. Đã hoàn tất có văn bản trả lời</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-weight:600; font-size:0.85rem; display:block; margin-bottom:4px;">Nội dung trả lời / Thông báo kết quả từ MTTQ Xã:</label>
+          <textarea id="edit-response-text" class="form-textarea" style="min-height:80px; font-size:0.9rem;" placeholder="Nhập kết quả xử lý hoặc nội dung trả lời để cử tri tra cứu..."></textarea>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="btn btn-gold" id="btn-save-feedback-status" style="padding:10px 20px; font-size:0.92rem;">
+          💾 Lưu Trạng Thái & Trả Lời
+        </button>
+        <button type="button" class="btn" id="btn-cancel-detail" style="background:#E5E7EB; color:#374151; padding:10px 18px; font-size:0.92rem;">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Database & App Scripts -->
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
