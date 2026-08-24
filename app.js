@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initFaqAccordion();
   initSamplePrompts();
   initAdminDashboard();
+  initAdminAuth();
 });
 
 // 1. Đồng hồ thời gian thực tiếng Việt
@@ -968,29 +969,118 @@ async function sendToGoogleSheets(feedbackRecord, overrideUrl = null) {
   }
 }
 
-// 6. Accordion câu hỏi thường gặp
-function initFaqAccordion() {
-  const faqItems = document.querySelectorAll('.faq-item');
-  faqItems.forEach(item => {
-    const question = item.querySelector('.faq-question');
-    question.addEventListener('click', () => {
-      const isActive = item.classList.contains('active');
-      faqItems.forEach(i => i.classList.remove('active'));
-      if (!isActive) {
-        item.classList.add('active');
+// 8. Hệ thống Quản lý Đăng nhập & Phân quyền Cán bộ Tiếp nhận
+function initAdminAuth() {
+  const btnLoginTrigger = document.getElementById('btn-login-trigger');
+  const footerBtnLogin = document.getElementById('footer-btn-login');
+  const btnOpenAdmin = document.getElementById('btn-open-admin');
+  const footerBtnAdmin = document.getElementById('footer-btn-admin');
+  const btnAdminLogout = document.getElementById('btn-admin-logout');
+
+  const loginModal = document.getElementById('admin-login-modal');
+  const btnCloseLogin = document.getElementById('btn-close-login');
+  const loginBackdrop = document.getElementById('login-modal-backdrop');
+  const loginForm = document.getElementById('admin-login-form');
+  const loginUsername = document.getElementById('login-username');
+  const loginPassword = document.getElementById('login-password');
+  const loginRemember = document.getElementById('login-remember');
+  const loginErrorMsg = document.getElementById('login-error-msg');
+
+  function isAuth() {
+    return localStorage.getItem('easup_admin_auth') === 'true' || 
+           sessionStorage.getItem('easup_admin_auth') === 'true';
+  }
+
+  function updateAuthUI() {
+    const loggedIn = isAuth();
+    if (btnOpenAdmin) btnOpenAdmin.style.display = loggedIn ? 'inline-flex' : 'none';
+    if (footerBtnAdmin) footerBtnAdmin.style.display = loggedIn ? 'inline-block' : 'none';
+    if (btnAdminLogout) btnAdminLogout.style.display = loggedIn ? 'inline-flex' : 'none';
+    if (btnLoginTrigger) btnLoginTrigger.style.display = loggedIn ? 'none' : 'inline-flex';
+    if (footerBtnLogin) footerBtnLogin.style.display = loggedIn ? 'none' : 'inline-block';
+  }
+
+  function openLoginModal() {
+    if (loginModal) {
+      if (loginErrorMsg) loginErrorMsg.style.display = 'none';
+      if (loginUsername) loginUsername.value = '';
+      if (loginPassword) loginPassword.value = '';
+      loginModal.classList.add('active');
+      setTimeout(() => {
+        if (loginUsername) loginUsername.focus();
+      }, 150);
+    }
+  }
+
+  function closeLoginModal() {
+    if (loginModal) {
+      loginModal.classList.remove('active');
+    }
+  }
+
+  if (btnLoginTrigger) btnLoginTrigger.addEventListener('click', openLoginModal);
+  if (footerBtnLogin) footerBtnLogin.addEventListener('click', openLoginModal);
+  if (btnCloseLogin) btnCloseLogin.addEventListener('click', closeLoginModal);
+  if (loginBackdrop) loginBackdrop.addEventListener('click', closeLoginModal);
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const user = (loginUsername.value || '').trim().toLowerCase();
+      const pwd = (loginPassword.value || '').trim();
+
+      // Danh sách tài khoản quản trị viên được phép truy cập
+      const validUsers = ['admin', 'mttq', 'mttq_easup', 'lehanh', 'lehanhkt01', 'canbo'];
+      const validPasswords = ['admin123', 'mttq123', 'easup123', '123456', 'lehanh123'];
+
+      const customPwd = localStorage.getItem('easup_admin_custom_pwd');
+      if (customPwd) validPasswords.push(customPwd);
+
+      if (validUsers.includes(user) && validPasswords.includes(pwd)) {
+        if (loginRemember && loginRemember.checked) {
+          localStorage.setItem('easup_admin_auth', 'true');
+        } else {
+          sessionStorage.setItem('easup_admin_auth', 'true');
+        }
+
+        closeLoginModal();
+        updateAuthUI();
+
+        // Mở ngay Bảng quản trị sau khi đăng nhập thành công
+        const adminModal = document.getElementById('admin-modal');
+        if (adminModal) {
+          adminModal.classList.add('active');
+          const adminTableBody = document.getElementById('admin-table-body');
+          if (adminTableBody) {
+            // Tự động render bảng
+            const searchInput = document.getElementById('admin-search-text');
+            if (searchInput) searchInput.dispatchEvent(new Event('input'));
+          }
+        }
+      } else {
+        if (loginErrorMsg) {
+          loginErrorMsg.style.display = 'block';
+          loginErrorMsg.textContent = '⚠️ Tên đăng nhập hoặc mật khẩu không chính xác! (Mặc định: admin / admin123)';
+        }
       }
     });
-  });
+  }
+
+  if (btnAdminLogout) {
+    btnAdminLogout.addEventListener('click', () => {
+      if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Cán bộ tiếp nhận không?')) {
+        localStorage.removeItem('easup_admin_auth');
+        sessionStorage.removeItem('easup_admin_auth');
+        updateAuthUI();
+        const adminModal = document.getElementById('admin-modal');
+        if (adminModal) adminModal.classList.remove('active');
+        alert('✓ Đã đăng xuất thành công.');
+      }
+    });
+  }
+
+  // Khởi tạo trạng thái giao diện ngay khi tải trang
+  updateAuthUI();
 }
 
-// 7. Click vào câu hỏi gợi ý trong card AI
-function initSamplePrompts() {
-  document.querySelectorAll('.ai-prompt-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const promptText = item.querySelector('span').textContent;
-      const chatgptUrl = `https://chatgpt.com/?q=${encodeURIComponent('Hỏi về xã Ea Súp, Đắk Lắk: ' + promptText)}`;
-      window.open(chatgptUrl, '_blank');
-    });
-  });
-}
 

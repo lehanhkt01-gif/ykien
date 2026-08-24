@@ -59,8 +59,17 @@
         <a href="#tra-cuu" class="nav-link">Tra cứu tiến độ</a>
         <a href="#quy-trinh" class="nav-link">Quy trình xử lý</a>
         <a href="#faq" class="nav-link">Hỏi - Đáp cử tri</a>
-        <button type="button" class="btn-nav-admin" id="btn-open-admin">
+        <!-- Nút mở Bảng quản lý (Ẩn mặc định, chỉ hiện khi đã đăng nhập Admin) -->
+        <button type="button" class="btn-nav-admin" id="btn-open-admin" style="display:none;">
           📊 Cán bộ Tiếp nhận
+        </button>
+        <!-- Nút Đăng nhập Cán bộ (Hiện khi chưa đăng nhập) -->
+        <button type="button" class="btn-nav-admin" id="btn-login-trigger" style="background:#1E293B; border:1px solid #475569; display:inline-flex;">
+          🔐 Đăng nhập Cán bộ
+        </button>
+        <!-- Nút Đăng xuất Quản trị (Hiện khi đã đăng nhập) -->
+        <button type="button" id="btn-admin-logout" style="display:none; background:transparent; border:1px solid #CBD5E1; color:#475569; padding:5px 12px; border-radius:999px; font-size:0.8rem; font-weight:600; cursor:pointer;" title="Đăng xuất khỏi tài khoản cán bộ">
+          🚪 Đăng xuất
         </button>
         <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" class="nav-link btn-nav-ai">
           🤖 Trợ lý AI Cử tri
@@ -458,7 +467,8 @@
           <li><a href="#trang-chu" style="color:#D1D5DB;">› Trang chủ</a></li>
           <li><a href="#gui-phan-anh" style="color:#D1D5DB;">› Tiếp nhận phản ánh cử tri</a></li>
           <li><a href="#tra-cuu" style="color:#D1D5DB;">› Tra cứu tiến độ hồ sơ</a></li>
-          <li><a href="javascript:void(0)" id="footer-btn-admin" style="color:#FCD34D;">› 📊 Bảng quản lý tiếp nhận</a></li>
+          <li><a href="javascript:void(0)" id="footer-btn-admin" style="display:none; color:#FCD34D;">› 📊 Bảng quản lý tiếp nhận</a></li>
+          <li><a href="javascript:void(0)" id="footer-btn-login" style="color:#9CA3AF;">› 🔐 Đăng nhập Cán bộ tiếp nhận</a></li>
           <li><a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" style="color:#FFB81C; font-weight:700;">› 🤖 Trợ lý AI Cử tri</a></li>
           <li><a href="https://cu-tri-phan-anh.vercel.app/" target="_blank" rel="noopener noreferrer" style="color:#D1D5DB;">› Cổng phản ánh trực tuyến Vercel</a></li>
         </ul>
@@ -624,10 +634,62 @@
         </button>
       </div>
     </div>
+  <!-- MODAL ĐĂNG NHẬP CÁN BỘ QUẢN TRỊ VIÊN -->
+  <div class="custom-modal" id="admin-login-modal">
+    <div class="custom-modal-backdrop" id="login-modal-backdrop"></div>
+    <div class="custom-modal-dialog" style="max-width: 440px; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);">
+      <div style="background: linear-gradient(135deg, #C8102E, #990011); color: #FFFFFF; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #FCD34D;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.4rem;">🔐</span>
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #FFFFFF;">ĐĂNG NHẬP CÁN BỘ</h3>
+            <p style="margin: 2px 0 0; font-size: 0.78rem; opacity: 0.9; color: #FEE2E2;">Ban Thường trực UBMTTQ Xã Ea Súp</p>
+          </div>
+        </div>
+        <button type="button" id="btn-close-login" style="background: transparent; border: none; color: #FFFFFF; font-size: 1.5rem; cursor: pointer; line-height: 1;">✕</button>
+      </div>
+
+      <form id="admin-login-form" style="padding: 24px; background: #FFFFFF;">
+        <div id="login-error-msg" style="display: none; background: #FEE2E2; color: #B91C1C; padding: 10px 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 16px; border: 1px solid #FCA5A5;">
+          ⚠️ Tên đăng nhập hoặc mật khẩu không chính xác!
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-weight: 600; font-size: 0.88rem; color: #374151; margin-bottom: 6px;">Tên đăng nhập / Tài khoản:</label>
+          <div style="position: relative;">
+            <input type="text" id="login-username" placeholder="Nhập admin hoặc mttq..." required style="width: 100%; padding: 10px 12px 10px 38px; border: 1.5px solid #D1D5DB; border-radius: 6px; font-size: 0.92rem; outline: none; box-sizing: border-box;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1rem; color: #9CA3AF;">👤</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <label style="display: block; font-weight: 600; font-size: 0.88rem; color: #374151; margin-bottom: 6px;">Mật khẩu:</label>
+          <div style="position: relative;">
+            <input type="password" id="login-password" placeholder="Nhập mật khẩu quản trị..." required style="width: 100%; padding: 10px 12px 10px 38px; border: 1.5px solid #D1D5DB; border-radius: 6px; font-size: 0.92rem; outline: none; box-sizing: border-box;">
+            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1rem; color: #9CA3AF;">🔑</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; font-size: 0.85rem;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: #4B5563;">
+            <input type="checkbox" id="login-remember" checked>
+            <span>Duy trì đăng nhập trên máy này</span>
+          </label>
+        </div>
+
+        <button type="submit" id="btn-submit-login" style="width: 100%; background: #C8102E; color: #FFFFFF; border: none; padding: 12px; border-radius: 6px; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: background 0.2s ease;">
+          🔓 Đăng Nhập Quản Trị
+        </button>
+
+        <div style="margin-top: 14px; text-align: center; font-size: 0.8rem; color: #6B7280; background: #F8FAFC; padding: 8px; border-radius: 6px;">
+          💡 <em>Tài khoản mặc định:</em> <strong>admin</strong> | <em>Mật khẩu:</em> <strong>admin123</strong> hoặc <strong>mttq123</strong>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Database & App Scripts (Cache-Busting Version) -->
-  <script src="db.js?v=3.7"></script>
-  <script src="app.js?v=3.7"></script>
+  <script src="db.js?v=4.0"></script>
+  <script src="app.js?v=4.0"></script>
 </body>
 </html>
