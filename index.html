@@ -551,6 +551,9 @@
         </div>
 
         <div class="admin-actions-group">
+          <button type="button" class="btn-export" id="btn-open-postgres-modal" style="background:#336791; font-weight:700;">
+            🐘 PostgreSQL
+          </button>
           <button type="button" class="btn-export" id="btn-sync-gsheet" style="background:#059669; font-weight:700;">
             ☁️ Đồng Bộ Chuẩn Theo Sheet
           </button>
@@ -601,6 +604,57 @@
             <!-- Render động từ EaSupDB -->
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CẤU HÌNH KẾT NỐI POSTGRESQL (Supabase / PostgREST) -->
+  <div class="modal-overlay" id="postgres-config-modal" style="z-index: 1005;">
+    <div class="modal-container" style="max-width: 520px; text-align:left; padding:0; overflow:hidden; border-top: 4px solid #336791;">
+      <div style="background: linear-gradient(135deg, #336791, #1d4060); color: #FFFFFF; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.4rem;">🐘</span>
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #FFFFFF;">KẾT NỐI POSTGRESQL DATABASE</h3>
+            <p style="margin: 2px 0 0; font-size: 0.78rem; opacity: 0.9; color: #E0F2FE;">Cơ sở dữ liệu đám mây Supabase / PostgREST</p>
+          </div>
+        </div>
+        <button type="button" id="btn-close-postgres" style="background: transparent; border: none; color: #FFFFFF; font-size: 1.5rem; cursor: pointer; line-height: 1;">✕</button>
+      </div>
+
+      <div style="padding: 24px; background: #FFFFFF;">
+        <div id="postgres-conn-status" style="margin-bottom: 16px; padding: 10px 14px; border-radius: 6px; font-size: 0.88rem; display: flex; align-items: center; gap: 8px; background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1;">
+          <span>⚪ Chưa kiểm tra kết nối PostgreSQL</span>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-weight: 600; font-size: 0.88rem; color: #374151; margin-bottom: 6px;">PostgreSQL REST API URL (Project URL):</label>
+          <input type="url" id="postgres-url-input" placeholder="VD: https://xyzcompany.supabase.co" style="width: 100%; padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 6px; font-size: 0.9rem; outline: none; box-sizing: border-box;">
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <label style="display: block; font-weight: 600; font-size: 0.88rem; color: #374151; margin-bottom: 6px;">Anon / Public API Key:</label>
+          <input type="password" id="postgres-key-input" placeholder="Nhập Supabase anon public key..." style="width: 100%; padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 6px; font-size: 0.9rem; outline: none; box-sizing: border-box;">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+          <button type="button" id="btn-test-postgres" style="flex: 1; background: #0284C7; color: #FFFFFF; border: none; padding: 10px; border-radius: 6px; font-weight: 600; font-size: 0.88rem; cursor: pointer;">
+            ⚡ Kiểm Tra Kết Nối
+          </button>
+          <button type="button" id="btn-save-postgres" style="flex: 1; background: #336791; color: #FFFFFF; border: none; padding: 10px; border-radius: 6px; font-weight: 700; font-size: 0.88rem; cursor: pointer;">
+            💾 Lưu Cấu Hình
+          </button>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <button type="button" id="btn-sync-postgres" style="width: 100%; background: #059669; color: #FFFFFF; border: none; padding: 10px; border-radius: 6px; font-weight: 700; font-size: 0.88rem; cursor: pointer;">
+            🔄 Đồng Bộ Toàn Bộ Dữ Liệu Từ PostgreSQL
+          </button>
+        </div>
+
+        <div style="background: #F8FAFC; padding: 12px 14px; border-radius: 6px; font-size: 0.8rem; color: #64748B; line-height: 1.5; border: 1px solid #E2E8F0;">
+          💡 <strong>Hướng dẫn nhanh:</strong> Tạo project miễn phí trên <a href="https://supabase.com" target="_blank" style="color:#0284C7; font-weight:600;">Supabase.com</a>, chạy script trong file <code>schema.sql</code> tại SQL Editor, sau đó copy Project URL & Anon Key dán vào đây.
+        </div>
       </div>
     </div>
   </div>
@@ -702,7 +756,7 @@
   </div>
 
   <!-- Database & App Scripts (Cache-Busting Version) -->
-  <script src="db.js?v=5.0"></script>
-  <script src="app.js?v=5.0"></script>
+  <script src="db.js?v=6.0"></script>
+  <script src="app.js?v=6.0"></script>
 </body>
 </html>

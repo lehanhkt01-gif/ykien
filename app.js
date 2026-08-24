@@ -375,6 +375,10 @@ function initFeedbackForm() {
 
       if (window.EaSupDB) {
         await EaSupDB.insert(feedbackRecord);
+        // TỰ ĐỘNG GỬI SANG POSTGRESQL (NẾU CÓ CẤU HÌNH)
+        if (EaSupDB.saveToPostgres) {
+          EaSupDB.saveToPostgres(feedbackRecord).catch(() => {});
+        }
       }
 
       // TỰ ĐỘNG GỬI SANG GOOGLE SHEETS & GOOGLE DRIVE (lehanhkt01@gmail.com)
@@ -460,6 +464,9 @@ function initLookupSystem() {
     let record = null;
     if (window.EaSupDB) {
       record = await EaSupDB.getByCode(code);
+      if (!record && EaSupDB.lookupFromPostgres) {
+        record = await EaSupDB.lookupFromPostgres(code);
+      }
     }
 
     if (record) {
@@ -841,12 +848,21 @@ function initAdminDashboard() {
       const responseText = editResponseText.value.trim();
 
       await EaSupDB.updateStatus(currentDetailTicketCode, newStatusCode, newStatusLabel, responseText);
+
+      // Cập nhật lên PostgreSQL (nếu có cấu hình)
+      if (EaSupDB.updateStatusInPostgres) {
+        EaSupDB.updateStatusInPostgres(currentDetailTicketCode, newStatusCode, newStatusLabel, responseText).catch(() => {});
+      }
+
       alert(`Đã cập nhật thành công hồ sơ ${currentDetailTicketCode}!`);
 
       closeDetailModal();
       await renderAdminTable();
     });
   }
+
+  // Khởi tạo Modal cấu hình PostgreSQL
+  initPostgresModal();
 
   // Sự kiện lọc
   if (searchInput) searchInput.addEventListener('input', renderAdminTable);
@@ -919,52 +935,26 @@ function initAdminDashboard() {
         return;
       }
 
-      inputGsheetUrl.value = url;
       localStorage.setItem('easup_google_sheets_url', url);
-
-      // Hiệu ứng phản hồi trực quan ngay trên nút bấm
-      const originalText = btnSaveGsheetUrl.innerHTML;
-      btnSaveGsheetUrl.innerHTML = '✓ ĐÃ LƯU KẾT NỐI!';
-      btnSaveGsheetUrl.style.background = '#10B981';
-      btnSaveGsheetUrl.style.transform = 'scale(1.05)';
-      btnSaveGsheetUrl.style.transition = 'all 0.2s ease';
-
-      setTimeout(() => {
-        btnSaveGsheetUrl.innerHTML = originalText;
-        btnSaveGsheetUrl.style.background = '#059669';
-        btnSaveGsheetUrl.style.transform = 'scale(1)';
-      }, 2500);
-
-      alert('✓ ĐÃ LƯU THÀNH CÔNG!\n\nĐường link Web App: ' + url + '\n\nTừ bây giờ, mọi ý kiến và tệp cử tri gửi sẽ tự động lưu vào Google Drive & Google Sheets của bạn.');
+      alert('✓ ĐÃ LƯU KẾT NỐI GOOGLE SHEETS THÀNH CÔNG!\n\nMọi ý kiến phản ánh của cử tri sẽ được tự động gửi sang bảng tính và Google Drive.');
     });
   }
 
-  // Nút gửi thử nghiệm sang Google Sheets
-  if (btnTestGsheet && inputGsheetUrl) {
+  if (btnTestGsheet) {
     btnTestGsheet.addEventListener('click', async (e) => {
       e.preventDefault();
-      let url = cleanWebAppUrl(inputGsheetUrl.value) || localStorage.getItem('easup_google_sheets_url');
-
+      let url = cleanWebAppUrl(inputGsheetUrl ? inputGsheetUrl.value : '');
       if (!url) {
-        alert('⚠️ Vui lòng dán URL Web App vào ô bên cạnh trước khi bấm gửi thử.');
-        inputGsheetUrl.focus();
-        return;
+        url = localStorage.getItem('easup_google_sheets_url') || DEFAULT_GOOGLE_SHEETS_URL;
       }
-
-      if (url.includes('/edit')) {
-        alert('⚠️ CẢNH BÁO: Link bạn dán là link chỉnh sửa Code Apps Script (có chữ /edit).\n\n👉 Vui lòng nhấn nút "Triển khai" (Deploy) > "Tùy chọn triển khai mới" > "Ứng dụng web" (Web App) > Chọn quyền "Bất kỳ ai" (Anyone) > Copy link kết thúc bằng /exec.');
-        return;
-      }
-
-      inputGsheetUrl.value = url;
-      localStorage.setItem('easup_google_sheets_url', url);
 
       btnTestGsheet.disabled = true;
-      btnTestGsheet.innerHTML = '⏳ Đang gửi...';
+      btnTestGsheet.innerHTML = '⏳ Đang gửi thử nghiệm...';
 
+      const testCode = 'TEST-SHEETS-' + Math.floor(1000 + Math.random() * 9000);
       const testRecord = {
-        ticket_code: 'TEST-PA-' + Math.floor(100000 + Math.random() * 900000),
-        sender_name: 'Cán bộ kiểm tra MTTQ',
+        ticket_code: testCode,
+        sender_name: 'Cán bộ Kiểm thử Hệ thống',
         sender_phone: '0912345678',
         village: 'Buôn A',
         category: 'Kiểm tra kết nối hệ thống',
@@ -992,6 +982,125 @@ function initAdminDashboard() {
         btnTestGsheet.innerHTML = '🧪 Gửi Dòng Thử Nghiệm';
       }
     });
+  }
+
+  // Quản lý cấu hình PostgreSQL (Supabase / PostgREST)
+  function initPostgresModal() {
+    const modal = document.getElementById('postgres-config-modal');
+    const btnOpen = document.getElementById('btn-open-postgres-modal');
+    const btnClose = document.getElementById('btn-close-postgres');
+    const btnTest = document.getElementById('btn-test-postgres');
+    const btnSave = document.getElementById('btn-save-postgres');
+    const btnSync = document.getElementById('btn-sync-postgres');
+    const urlInput = document.getElementById('postgres-url-input');
+    const keyInput = document.getElementById('postgres-key-input');
+    const statusBox = document.getElementById('postgres-conn-status');
+
+    function refreshStatus() {
+      if (!window.EaSupDB || !EaSupDB.getPostgresConfig) return;
+      const cfg = EaSupDB.getPostgresConfig();
+      if (urlInput) urlInput.value = cfg.url;
+      if (keyInput) keyInput.value = cfg.key;
+
+      if (cfg.url && cfg.key) {
+        if (statusBox) {
+          statusBox.innerHTML = '<span>🟢 Đã lưu thông tin PostgreSQL. Bấm <strong>Kiểm Tra Kết Nối</strong> để xác thực.</span>';
+          statusBox.style.background = '#ECFDF5';
+          statusBox.style.color = '#065F46';
+          statusBox.style.borderColor = '#A7F3D0';
+        }
+        if (btnOpen) btnOpen.innerHTML = '🐘 PostgreSQL 🟢';
+      } else {
+        if (statusBox) {
+          statusBox.innerHTML = '<span>⚪ Chưa cấu hình PostgreSQL (dữ liệu hiện lưu qua Google Sheets & CSDL nội bộ).</span>';
+          statusBox.style.background = '#F1F5F9';
+          statusBox.style.color = '#475569';
+          statusBox.style.borderColor = '#CBD5E1';
+        }
+        if (btnOpen) btnOpen.innerHTML = '🐘 PostgreSQL';
+      }
+    }
+
+    if (btnOpen) {
+      btnOpen.addEventListener('click', () => {
+        refreshStatus();
+        if (modal) modal.classList.add('active');
+      });
+    }
+
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        if (modal) modal.classList.remove('active');
+      });
+    }
+
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('active');
+      });
+    }
+
+    if (btnTest) {
+      btnTest.addEventListener('click', async () => {
+        const u = urlInput ? urlInput.value.trim() : '';
+        const k = keyInput ? keyInput.value.trim() : '';
+        if (!u || !k) {
+          alert('Vui lòng nhập đầy đủ PostgreSQL REST API URL và Anon Key.');
+          return;
+        }
+
+        btnTest.disabled = true;
+        btnTest.textContent = '⏳ Đang kiểm tra...';
+        statusBox.innerHTML = '<span>⏳ Đang gửi truy vấn kiểm tra tới PostgreSQL...</span>';
+
+        const res = await EaSupDB.testPostgresConnection(u, k);
+        btnTest.disabled = false;
+        btnTest.textContent = '⚡ Kiểm Tra Kết Nối';
+
+        if (res.success) {
+          statusBox.innerHTML = `<span>🟢 <strong>${res.message}</strong></span>`;
+          statusBox.style.background = '#ECFDF5';
+          statusBox.style.color = '#065F46';
+          statusBox.style.borderColor = '#A7F3D0';
+          showToast('✓ Kết nối PostgreSQL thành công!', 'success');
+        } else {
+          statusBox.innerHTML = `<span>🔴 <strong>${res.message}</strong></span>`;
+          statusBox.style.background = '#FEF2F2';
+          statusBox.style.color = '#991B1B';
+          statusBox.style.borderColor = '#FECACA';
+        }
+      });
+    }
+
+    if (btnSave) {
+      btnSave.addEventListener('click', async () => {
+        const u = urlInput ? urlInput.value.trim() : '';
+        const k = keyInput ? keyInput.value.trim() : '';
+        EaSupDB.setPostgresConfig(u, k);
+        refreshStatus();
+        showToast('💾 Đã lưu cấu hình PostgreSQL thành công!', 'success');
+      });
+    }
+
+    if (btnSync) {
+      btnSync.addEventListener('click', async () => {
+        btnSync.disabled = true;
+        btnSync.textContent = '⏳ Đang đồng bộ từ PostgreSQL...';
+        const res = await EaSupDB.syncFromPostgres();
+        btnSync.disabled = false;
+        btnSync.textContent = '🔄 Đồng Bộ Toàn Bộ Dữ Liệu Từ PostgreSQL';
+
+        if (res && res.success) {
+          showToast(`✓ Đã đồng bộ thành công ${res.count} hồ sơ từ PostgreSQL!`, 'success');
+          if (typeof renderAdminTable === 'function') renderAdminTable();
+          if (modal) modal.classList.remove('active');
+        } else {
+          alert('Lỗi đồng bộ PostgreSQL: ' + (res ? res.message : 'Vui lòng kiểm tra lại kết nối'));
+        }
+      });
+    }
+
+    refreshStatus();
   }
 }
 

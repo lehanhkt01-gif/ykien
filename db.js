@@ -524,6 +524,204 @@ const EaSupDB = (() => {
     }
   }
 
+  // ============================================================
+  // 10. TÍCH HỢP CƠ SỞ DỮ LIỆU POSTGRESQL (Supabase / PostgREST)
+  // ============================================================
+  function getPostgresConfig() {
+    return {
+      url: localStorage.getItem('easup_postgres_url') || '',
+      key: localStorage.getItem('easup_postgres_key') || ''
+    };
+  }
+
+  function setPostgresConfig(url, key) {
+    if (url) localStorage.setItem('easup_postgres_url', url.trim().replace(/\/$/, ''));
+    else localStorage.removeItem('easup_postgres_url');
+
+    if (key) localStorage.setItem('easup_postgres_key', key.trim());
+    else localStorage.removeItem('easup_postgres_key');
+  }
+
+  function isPostgresConfigured() {
+    const cfg = getPostgresConfig();
+    return !!(cfg.url && cfg.key);
+  }
+
+  async function testPostgresConnection(customUrl = null, customKey = null) {
+    const cfg = getPostgresConfig();
+    const url = (customUrl || cfg.url || '').trim().replace(/\/$/, '');
+    const key = (customKey || cfg.key || '').trim();
+
+    if (!url || !key) {
+      return { success: false, message: 'Vui lòng nhập đầy đủ PostgreSQL REST API URL và Anon Key.' };
+    }
+
+    try {
+      const response = await fetch(`${url}/rest/v1/citizen_feedbacks?select=count`, {
+        method: 'GET',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`
+        }
+      });
+
+      if (response.ok) {
+        return { success: true, message: 'Kết nối PostgreSQL Database thành công 100%!' };
+      } else {
+        const errText = await response.text();
+        return { success: false, message: `Lỗi HTTP ${response.status}: ${errText}` };
+      }
+    } catch (e) {
+      return { success: false, message: `Không thể kết nối máy chủ PostgreSQL: ${e.message}` };
+    }
+  }
+
+  async function saveToPostgres(record) {
+    const cfg = getPostgresConfig();
+    if (!cfg.url || !cfg.key) return { success: false, message: 'Chưa cấu hình PostgreSQL' };
+
+    try {
+      const payload = {
+        ticket_code: record.ticket_code,
+        sender_name: record.sender_name || 'Cử tri ẩn danh',
+        sender_phone: record.sender_phone || '',
+        village: record.village || record.village_name || '',
+        village_name: record.village || record.village_name || '',
+        category: record.category || record.category_name || '',
+        category_name: record.category || record.category_name || '',
+        title: record.title || '',
+        content: record.content || '',
+        attachments: record.attachments || [],
+        status_code: record.status_code || 'RECEIVED',
+        status_label: record.status_label || 'Mới tiếp nhận',
+        response_content: record.response_content || ''
+      };
+
+      const response = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks`, {
+        method: 'POST',
+        headers: {
+          'apikey': cfg.key,
+          'Authorization': `Bearer ${cfg.key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        console.log('✓ Đã lưu phản ánh thành công vào PostgreSQL Database');
+        return { success: true };
+      } else {
+        const errText = await response.text();
+        console.warn('Lỗi ghi PostgreSQL:', errText);
+        return { success: false, message: errText };
+      }
+    } catch (err) {
+      console.warn('Lỗi kết nối saveToPostgres:', err);
+      return { success: false, message: err.message };
+    }
+  }
+
+  async function syncFromPostgres() {
+    const cfg = getPostgresConfig();
+    if (!cfg.url || !cfg.key) return { success: false, message: 'Chưa cấu hình PostgreSQL' };
+
+    try {
+      const response = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks?select=*&order=created_at.desc`, {
+        method: 'GET',
+        headers: {
+          'apikey': cfg.key,
+          'Authorization': `Bearer ${cfg.key}`
+        }
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const rows = await response.json();
+      if (Array.isArray(rows)) {
+        rows.forEach(item => {
+          if (!item.village) item.village = item.village_name || 'Xã Ea Súp';
+          if (!item.category) item.category = item.category_name || 'Lĩnh vực khác';
+        });
+
+        saveLocalStorageData(rows);
+
+        try {
+          const db = await openDB();
+          if (db) {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            store.clear();
+            rows.forEach(item => store.put(item));
+          }
+        } catch(e) {}
+
+        return { success: true, count: rows.length, data: rows };
+      } else {
+        return { success: false, message: 'Dữ liệu trả về không đúng định dạng' };
+      }
+    } catch (e) {
+      console.warn('Lỗi syncFromPostgres:', e);
+      return { success: false, message: e.message };
+    }
+  }
+
+  async function updateStatusInPostgres(ticketCode, statusCode, statusLabel, responseContent, officer = 'Ban Thường trực UBMTTQ') {
+    const cfg = getPostgresConfig();
+    if (!cfg.url || !cfg.key) return { success: false, message: 'Chưa cấu hình PostgreSQL' };
+
+    try {
+      const response = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks?ticket_code=eq.${encodeURIComponent(ticketCode)}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': cfg.key,
+          'Authorization': `Bearer ${cfg.key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({
+          status_code: statusCode,
+          status_label: statusLabel,
+          response_content: responseContent,
+          assigned_officer: officer,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        return { success: true };
+      } else {
+        const err = await response.text();
+        return { success: false, message: err };
+      }
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
+  }
+
+  async function lookupFromPostgres(ticketCode) {
+    const cfg = getPostgresConfig();
+    if (!cfg.url || !cfg.key) return null;
+
+    try {
+      const response = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks?ticket_code=eq.${encodeURIComponent(ticketCode)}&select=*`, {
+        method: 'GET',
+        headers: {
+          'apikey': cfg.key,
+          'Authorization': `Bearer ${cfg.key}`
+        }
+      });
+
+      if (response.ok) {
+        const rows = await response.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          return rows[0];
+        }
+      }
+    } catch(e) {}
+    return null;
+  }
+
   // Khởi tạo ngay lập tức khi file script được load
   getLocalStorageData();
 
@@ -537,6 +735,17 @@ const EaSupDB = (() => {
     resetToDefault: resetToDefault,
     clearMockData: clearMockData,
     syncFromGoogleSheets: syncFromGoogleSheets,
+    
+    // PostgreSQL Methods
+    getPostgresConfig: getPostgresConfig,
+    setPostgresConfig: setPostgresConfig,
+    isPostgresConfigured: isPostgresConfigured,
+    testPostgresConnection: testPostgresConnection,
+    saveToPostgres: saveToPostgres,
+    syncFromPostgres: syncFromPostgres,
+    updateStatusInPostgres: updateStatusInPostgres,
+    lookupFromPostgres: lookupFromPostgres,
+
     exportData: exportData
   };
 })();
