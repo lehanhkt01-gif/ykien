@@ -66,14 +66,14 @@
         </button>
 
         <!-- Nhóm hiển thị Tên Cán Bộ + Nút Mở Bảng + Nút Đăng Xuất (Hiện khi đã đăng nhập) -->
-        <div id="admin-user-badge" style="display:none; align-items:center; gap:6px;">
-          <span id="admin-user-pill" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; font-weight:700; padding:6px 12px; border-radius:999px; font-size:0.83rem; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <div id="admin-user-badge" style="display:none; align-items:center; gap:6px; flex-shrink:0;">
+          <span id="admin-user-pill">
             👤 <span id="admin-user-display-name">CB. Quản trị</span>
           </span>
           <button type="button" class="btn-nav-admin" id="btn-open-admin" style="display:none;">
             📊 Cán bộ Tiếp nhận
           </button>
-          <button type="button" id="btn-admin-logout" style="background:#FEE2E2; border:1px solid #FCA5A5; color:#991B1B; padding:6px 12px; border-radius:999px; font-size:0.82rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;" title="Đăng xuất khỏi quyền cán bộ">
+          <button type="button" id="btn-admin-logout" title="Đăng xuất khỏi quyền cán bộ">
             🚪 Đăng xuất
           </button>
         </div>
@@ -756,7 +756,7 @@
   </div>
 
   <!-- Database & App Scripts (Cache-Busting Version) -->
-  <script src="db.js?v=6.2"></script>
-  <script src="app.js?v=6.2"></script>
+  <script src="db.js?v=6.3"></script>
+  <script src="app.js?v=6.3"></script>
 </body>
 </html>

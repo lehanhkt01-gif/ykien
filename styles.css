@@ -103,23 +103,25 @@ button {
 }
 
 .header-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 12px 20px;
+  padding: 10px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
 .brand-wrapper {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  flex-shrink: 0;
 }
 
 .emblem-logo {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   border-radius: 50%;
   filter: drop-shadow(0 2px 6px rgba(200, 16, 46, 0.25));
@@ -131,60 +133,85 @@ button {
 }
 
 .brand-text h1 {
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   font-weight: 800;
   color: var(--primary-red);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   line-height: 1.2;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .brand-text p {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
-  font-weight: 500;
+  font-weight: 600;
   margin-top: 2px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .main-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .nav-link {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  color: var(--color-text-main);
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
+  color: #374151;
+  padding: 8px 12px;
+  border-radius: 8px;
   transition: all 0.2s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.2;
+  border: 1px solid transparent;
 }
 
 .nav-link:hover {
   color: var(--primary-red);
   background-color: #FFF1F2;
+  border-color: #FFE4E6;
 }
 
 .nav-link.active {
   color: var(--primary-red);
-  background-color: #FFE4E6;
+  background-color: #FEF2F2;
+  border-color: #FECACA;
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(200, 16, 46, 0.06);
 }
 
 .btn-nav-ai {
-  background: linear-gradient(135deg, var(--primary-red) 0%, var(--primary-red-dark) 100%);
+  background: linear-gradient(135deg, #C8102E 0%, #990B20 100%);
   color: #FFFFFF !important;
-  border: 1px solid var(--primary-gold);
-  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.25);
+  border: 1px solid #F59E0B;
+  box-shadow: 0 2px 8px rgba(200, 16, 46, 0.25);
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .btn-nav-ai:hover {
-  background: linear-gradient(135deg, var(--primary-red-dark) 0%, var(--primary-red-deep) 100%) !important;
-  color: var(--primary-gold-light) !important;
+  background: linear-gradient(135deg, #990B20 0%, #700614 100%) !important;
+  color: #FEF08A !important;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.35);
 }
 
 /* HERO SECTION */
@@ -1329,20 +1356,69 @@ button {
 }
 
 .btn-nav-admin {
-  background: #FEF3C7;
-  color: #92400E !important;
-  border: 1px solid #FCD34D;
+  background: #0284C7;
+  color: #FFFFFF !important;
+  border: none;
   font-weight: 700;
-  border-radius: var(--radius-sm);
-  padding: 6px 12px;
+  border-radius: 8px;
+  padding: 8px 14px;
   font-size: 0.85rem;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+  transition: all 0.2s ease;
+  line-height: 1.2;
 }
 
 .btn-nav-admin:hover {
-  background: #FDE68A;
-  color: #78350F !important;
+  background: #0369A1;
+  color: #FFFFFF !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
+}
+
+#admin-user-pill {
+  background: #FFFBEB;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+  font-weight: 700;
+  padding: 8px 13px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  line-height: 1.2;
+}
+
+#btn-admin-logout {
+  background: #FEE2E2;
+  border: 1px solid #FCA5A5;
+  color: #991B1B;
+  padding: 8px 13px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+#btn-admin-logout:hover {
+  background: #FECACA;
+  color: #7F1D1D;
+  transform: translateY(-1px);
 }
 
