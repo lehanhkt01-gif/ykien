@@ -558,7 +558,7 @@ const EaSupDB = (() => {
 
   async function testPostgresConnection(customUrl = null, customKey = null) {
     const cfg = getPostgresConfig();
-    const url = (customUrl || cfg.url || '').trim().replace(/\/$/, '');
+    const url = cleanPostgresUrl(customUrl || cfg.url || '');
     const key = (customKey || cfg.key || '').trim();
 
     if (!url || !key) {

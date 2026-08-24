@@ -1040,9 +1040,26 @@ function initAdminDashboard() {
       });
     }
 
+    function cleanSupabaseUrl(raw) {
+      let u = (raw || '').trim().replace(/\/+$/, '');
+      if (u.endsWith('/rest/v1')) {
+        u = u.substring(0, u.length - '/rest/v1'.length);
+      }
+      return u.replace(/\/+$/, '');
+    }
+
+    if (urlInput) {
+      urlInput.addEventListener('blur', () => {
+        if (urlInput.value) {
+          urlInput.value = cleanSupabaseUrl(urlInput.value);
+        }
+      });
+    }
+
     if (btnTest) {
       btnTest.addEventListener('click', async () => {
-        const u = urlInput ? urlInput.value.trim() : '';
+        const u = cleanSupabaseUrl(urlInput ? urlInput.value : '');
+        if (urlInput && u) urlInput.value = u;
         const k = keyInput ? keyInput.value.trim() : '';
         if (!u || !k) {
           alert('Vui lòng nhập đầy đủ PostgreSQL REST API URL và Anon Key.');
@@ -1074,7 +1091,8 @@ function initAdminDashboard() {
 
     if (btnSave) {
       btnSave.addEventListener('click', async () => {
-        const u = urlInput ? urlInput.value.trim() : '';
+        const u = cleanSupabaseUrl(urlInput ? urlInput.value : '');
+        if (urlInput && u) urlInput.value = u;
         const k = keyInput ? keyInput.value.trim() : '';
         EaSupDB.setPostgresConfig(u, k);
         refreshStatus();
