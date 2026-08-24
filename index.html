@@ -634,10 +634,11 @@
         </button>
       </div>
     </div>
+  </div>
+
   <!-- MODAL ĐĂNG NHẬP CÁN BỘ QUẢN TRỊ VIÊN -->
-  <div class="custom-modal" id="admin-login-modal">
-    <div class="custom-modal-backdrop" id="login-modal-backdrop"></div>
-    <div class="custom-modal-dialog" style="max-width: 440px; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.35);">
+  <div class="modal-overlay" id="admin-login-modal" style="z-index: 1002;">
+    <div class="modal-container" style="max-width: 440px; text-align:left; padding:0; overflow:hidden; border-top: none;">
       <div style="background: linear-gradient(135deg, #C8102E, #990011); color: #FFFFFF; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #FCD34D;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 1.4rem;">🔐</span>
@@ -689,7 +690,7 @@
   </div>
 
   <!-- Database & App Scripts (Cache-Busting Version) -->
-  <script src="db.js?v=4.0"></script>
-  <script src="app.js?v=4.0"></script>
+  <script src="db.js?v=4.1"></script>
+  <script src="app.js?v=4.1"></script>
 </body>
 </html>

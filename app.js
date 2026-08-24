@@ -969,6 +969,35 @@ async function sendToGoogleSheets(feedbackRecord, overrideUrl = null) {
   }
 }
 
+// 6. Accordion câu hỏi thường gặp
+function initFaqAccordion() {
+  const faqItems = document.querySelectorAll('.faq-item');
+  faqItems.forEach(item => {
+    const question = item.querySelector('.faq-question');
+    if (question) {
+      question.addEventListener('click', () => {
+        const isActive = item.classList.contains('active');
+        faqItems.forEach(i => i.classList.remove('active'));
+        if (!isActive) {
+          item.classList.add('active');
+        }
+      });
+    }
+  });
+}
+
+// 7. Click vào câu hỏi gợi ý trong card AI
+function initSamplePrompts() {
+  document.querySelectorAll('.ai-prompt-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const textSpan = item.querySelector('span');
+      const promptText = textSpan ? textSpan.textContent : '';
+      const chatgptUrl = `https://chatgpt.com/?q=${encodeURIComponent('Hỏi về xã Ea Súp, Đắk Lắk: ' + promptText)}`;
+      window.open(chatgptUrl, '_blank');
+    });
+  });
+}
+
 // 8. Hệ thống Quản lý Đăng nhập & Phân quyền Cán bộ Tiếp nhận
 function initAdminAuth() {
   const btnLoginTrigger = document.getElementById('btn-login-trigger');
