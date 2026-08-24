@@ -527,15 +527,24 @@ const EaSupDB = (() => {
   // ============================================================
   // 10. TÍCH HỢP CƠ SỞ DỮ LIỆU POSTGRESQL (Supabase / PostgREST)
   // ============================================================
+  function cleanPostgresUrl(url) {
+    let u = (url || '').trim().replace(/\/+$/, '');
+    if (u.endsWith('/rest/v1')) {
+      u = u.substring(0, u.length - '/rest/v1'.length);
+    }
+    return u.replace(/\/+$/, '');
+  }
+
   function getPostgresConfig() {
     return {
-      url: localStorage.getItem('easup_postgres_url') || '',
-      key: localStorage.getItem('easup_postgres_key') || ''
+      url: cleanPostgresUrl(localStorage.getItem('easup_postgres_url') || ''),
+      key: (localStorage.getItem('easup_postgres_key') || '').trim()
     };
   }
 
   function setPostgresConfig(url, key) {
-    if (url) localStorage.setItem('easup_postgres_url', url.trim().replace(/\/$/, ''));
+    const cleanedUrl = cleanPostgresUrl(url);
+    if (cleanedUrl) localStorage.setItem('easup_postgres_url', cleanedUrl);
     else localStorage.removeItem('easup_postgres_url');
 
     if (key) localStorage.setItem('easup_postgres_key', key.trim());
