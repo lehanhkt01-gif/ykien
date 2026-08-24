@@ -1,4 +1,4 @@
-# Hệ Thống Tiếp Nhận & Trả Lời Ý Kiến Cử Tri - Xã Ea Súp
+# Ý Kiến Cử Tri - Xã Ea Súp
 
 Hệ thống số hóa tiếp nhận, phân loại, giải quyết và trả lời kiến nghị, phản ánh của cử tri thuộc Ủy ban Mặt trận Tổ quốc Việt Nam Xã Ea Súp.
 
