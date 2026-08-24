@@ -3,6 +3,49 @@
 // Tích hợp Cơ Sở Dữ Liệu EaSupDB (IndexedDB / LocalStorage)
 // ============================================================
 
+// Hàm tiện ích định dạng ngày giờ chuẩn tiếng Việt toàn cục
+function formatVNTime(val) {
+  if (!val) return 'Mới gửi';
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+      return s;
+    }
+  }
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${mins}`;
+    }
+  } catch (e) {}
+  return String(val);
+}
+
+function formatVNDateOnly(val) {
+  if (!val) return 'Mới gửi';
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+      return s.split(' ')[0];
+    }
+  }
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  } catch (e) {}
+  return String(val);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Khởi tạo cơ sở dữ liệu
   if (window.EaSupDB) {
@@ -336,49 +379,6 @@ function initLookupSystem() {
 
     resultBox.style.display = 'block';
     resultBox.innerHTML = '<div style="text-align:center; padding:10px; color:#6B7280;">⏳ Đang truy vấn cơ sở dữ liệu...</div>';
-
-// Hàm tiện ích định dạng ngày giờ chuẩn tiếng Việt, xử lý cả ISO string lẫn dd/MM/yyyy từ Google Sheets
-function formatVNTime(val) {
-  if (!val) return 'Mới gửi';
-  if (typeof val === 'string') {
-    const s = val.trim();
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-      return s;
-    }
-  }
-  try {
-    const d = new Date(val);
-    if (!isNaN(d.getTime())) {
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      const hours = String(d.getHours()).padStart(2, '0');
-      const mins = String(d.getMinutes()).padStart(2, '0');
-      return `${day}/${month}/${year} ${hours}:${mins}`;
-    }
-  } catch (e) {}
-  return String(val);
-}
-
-function formatVNDateOnly(val) {
-  if (!val) return 'Mới gửi';
-  if (typeof val === 'string') {
-    const s = val.trim();
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-      return s.split(' ')[0];
-    }
-  }
-  try {
-    const d = new Date(val);
-    if (!isNaN(d.getTime())) {
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-  } catch (e) {}
-  return String(val);
-}
 
     let record = null;
     if (window.EaSupDB) {
