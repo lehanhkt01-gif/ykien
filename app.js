@@ -675,37 +675,87 @@ function initAdminDashboard() {
   const btnTestGsheet = document.getElementById('btn-test-gsheet');
   const savedUrl = localStorage.getItem('easup_google_sheets_url') || '';
 
+  function cleanWebAppUrl(rawUrl) {
+    let url = (rawUrl || '').trim();
+    if (!url) return '';
+    // Nếu dán link có /edit -> giữ nguyên để cảnh báo
+    if (url.includes('/edit')) return url;
+
+    // Nếu bắt đầu bằng script.google.com nhưng thiếu /exec -> tự động thêm /exec
+    if (url.startsWith('https://script.google.com/macros/s/')) {
+      url = url.replace(/\/+$/, '');
+      if (!url.endsWith('/exec') && !url.endsWith('/dev')) {
+        url = url + '/exec';
+      }
+    }
+    return url;
+  }
+
   if (inputGsheetUrl) {
     inputGsheetUrl.value = savedUrl;
+
+    // Tự động lưu ngay khi người dùng dán hoặc gõ link
+    inputGsheetUrl.addEventListener('input', () => {
+      const clean = cleanWebAppUrl(inputGsheetUrl.value);
+      if (clean && !clean.includes('/edit')) {
+        localStorage.setItem('easup_google_sheets_url', clean);
+      }
+    });
+
+    inputGsheetUrl.addEventListener('blur', () => {
+      const clean = cleanWebAppUrl(inputGsheetUrl.value);
+      if (clean) {
+        inputGsheetUrl.value = clean;
+        localStorage.setItem('easup_google_sheets_url', clean);
+      }
+    });
   }
 
   if (btnSaveGsheetUrl && inputGsheetUrl) {
-    btnSaveGsheetUrl.addEventListener('click', () => {
-      const url = inputGsheetUrl.value.trim();
+    btnSaveGsheetUrl.addEventListener('click', (e) => {
+      e.preventDefault();
+      let url = cleanWebAppUrl(inputGsheetUrl.value);
+
       if (!url) {
-        alert('Vui lòng dán URL Google Apps Script Web App.');
+        alert('⚠️ Vui lòng dán URL Google Apps Script Web App.');
+        inputGsheetUrl.focus();
         return;
       }
+
       if (url.includes('/edit')) {
         alert('⚠️ CẢNH BÁO: Đường link bạn vừa nhập có chứa "/edit" (Đây là trang chỉnh sửa mã nguồn, KHÔNG PHẢI URL Web App).\n\n👉 Cách lấy URL Web App đúng:\n1. Mở trang Google Apps Script.\n2. Bấm nút "Triển khai" (Deploy) màu xanh ở góc phải trên > Chọn "Tùy chọn triển khai mới" (New deployment).\n3. Chọn loại: "Ứng dụng web" (Web App).\n4. Quyền truy cập (Who has access): Chọn "Bất kỳ ai" (Anyone).\n5. Bấm "Triển khai" và sao chép đường link kết thúc bằng "/exec".');
         return;
       }
-      if (!url.startsWith('https://script.google.com/macros/s/') || !url.endsWith('/exec')) {
-        if (!confirm('⚠️ Cảnh báo: URL Web App hợp lệ thường bắt đầu bằng https://script.google.com/macros/s/ và kết thúc bằng /exec\n\nBạn có muốn tiếp tục lưu URL này không?')) {
-          return;
-        }
-      }
+
+      inputGsheetUrl.value = url;
       localStorage.setItem('easup_google_sheets_url', url);
-      alert('✓ Đã lưu thành công cấu hình Google Sheets! Dữ liệu phản ánh sẽ tự động gửi sang tài khoản lehanhkt01@gmail.com.');
+
+      // Hiệu ứng phản hồi trực quan ngay trên nút bấm
+      const originalText = btnSaveGsheetUrl.innerHTML;
+      btnSaveGsheetUrl.innerHTML = '✓ ĐÃ LƯU KẾT NỐI!';
+      btnSaveGsheetUrl.style.background = '#10B981';
+      btnSaveGsheetUrl.style.transform = 'scale(1.05)';
+      btnSaveGsheetUrl.style.transition = 'all 0.2s ease';
+
+      setTimeout(() => {
+        btnSaveGsheetUrl.innerHTML = originalText;
+        btnSaveGsheetUrl.style.background = '#059669';
+        btnSaveGsheetUrl.style.transform = 'scale(1)';
+      }, 2500);
+
+      alert('✓ ĐÃ LƯU THÀNH CÔNG!\n\nĐường link Web App: ' + url + '\n\nTừ bây giờ, mọi ý kiến và tệp cử tri gửi sẽ tự động lưu vào Google Drive & Google Sheets của bạn.');
     });
   }
 
   // Nút gửi thử nghiệm sang Google Sheets
   if (btnTestGsheet && inputGsheetUrl) {
-    btnTestGsheet.addEventListener('click', async () => {
-      const url = inputGsheetUrl.value.trim() || localStorage.getItem('easup_google_sheets_url');
+    btnTestGsheet.addEventListener('click', async (e) => {
+      e.preventDefault();
+      let url = cleanWebAppUrl(inputGsheetUrl.value) || localStorage.getItem('easup_google_sheets_url');
+
       if (!url) {
         alert('⚠️ Vui lòng dán URL Web App vào ô bên cạnh trước khi bấm gửi thử.');
+        inputGsheetUrl.focus();
         return;
       }
 
@@ -714,10 +764,11 @@ function initAdminDashboard() {
         return;
       }
 
+      inputGsheetUrl.value = url;
       localStorage.setItem('easup_google_sheets_url', url);
 
       btnTestGsheet.disabled = true;
-      btnTestGsheet.textContent = '⏳ Đang gửi...';
+      btnTestGsheet.innerHTML = '⏳ Đang gửi...';
 
       const testRecord = {
         ticket_code: 'TEST-PA-' + Math.floor(100000 + Math.random() * 900000),
@@ -746,7 +797,7 @@ function initAdminDashboard() {
         alert(`Lỗi khi gửi: ${err.message}`);
       } finally {
         btnTestGsheet.disabled = false;
-        btnTestGsheet.textContent = '🧪 Gửi Dòng Thử Nghiệm';
+        btnTestGsheet.innerHTML = '🧪 Gửi Dòng Thử Nghiệm';
       }
     });
   }
