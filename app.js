@@ -522,16 +522,22 @@ function initAdminDashboard() {
         if (item.status_code === 'COMPLETED') badgeClass = 'completed';
         else if (item.status_code === 'PROCESSING') badgeClass = 'processing';
 
-        const fileCount = (item.attachments && item.attachments.length) || 0;
-        const fileTag = fileCount > 0 
-          ? `<span style="background:#E0E7FF; color:#3730A3; font-weight:700; padding:2px 8px; border-radius:999px; font-size:0.75rem;">📎 ${fileCount}</span>`
-          : `<span style="color:#9CA3AF; font-size:0.8rem;">-</span>`;
+        const fileCount = (item.attachments && item.attachments.length) || item.file_count || 0;
+        let fileTag = `<span style="color:#9CA3AF; font-size:0.8rem;">-</span>`;
+
+        if (item.drive_links && item.drive_links.length > 0) {
+          fileTag = `<a href="${item.drive_links[0].url}" target="_blank" rel="noopener noreferrer" style="background:#DCFCE7; color:#15803D; font-weight:700; padding:2px 8px; border-radius:999px; font-size:0.75rem; text-decoration:none; display:inline-block;" title="Bấm để mở tệp trên Google Drive">📂 Drive (${item.drive_links.length})</a>`;
+        } else if (fileCount > 0) {
+          fileTag = `<span style="background:#E0E7FF; color:#3730A3; font-weight:700; padding:2px 8px; border-radius:999px; font-size:0.75rem;">📎 ${fileCount}</span>`;
+        }
 
         let dateStr = 'Mới gửi';
         if (item.created_at) {
           try {
             dateStr = new Date(item.created_at).toLocaleDateString('vi-VN');
-          } catch(e) {}
+          } catch(e) {
+            dateStr = item.created_at;
+          }
         }
 
         const senderVillage = item.village || item.village_name || 'Xã Ea Súp';
@@ -570,6 +576,36 @@ function initAdminDashboard() {
     }
   }
 
+  // Nút Đồng Bộ Từ Google Sheets & Drive
+  const btnSyncGsheet = document.getElementById('btn-sync-gsheet');
+  if (btnSyncGsheet && window.EaSupDB) {
+    btnSyncGsheet.addEventListener('click', async () => {
+      const url = localStorage.getItem('easup_google_sheets_url');
+      if (!url) {
+        alert('⚠️ Vui lòng dán và lưu URL Google Sheets ở thanh kết nối bên dưới trước khi đồng bộ.');
+        return;
+      }
+
+      btnSyncGsheet.disabled = true;
+      btnSyncGsheet.innerHTML = '⏳ Đang đồng bộ...';
+
+      try {
+        const res = await EaSupDB.syncFromGoogleSheets(url);
+        if (res.success) {
+          await renderAdminTable();
+          alert(`✓ ĐÃ ĐỒNG BỘ THÀNH CÔNG!\n\nĐã đồng bộ ${res.count} dòng từ Google Sheets & Google Drive về Bảng quản lý.`);
+        } else {
+          alert(`⚠️ Thông báo từ Google Sheets: ${res.message}`);
+        }
+      } catch (err) {
+        alert(`Lỗi khi đồng bộ: ${err.message}`);
+      } finally {
+        btnSyncGsheet.disabled = false;
+        btnSyncGsheet.innerHTML = '☁️ Đồng Bộ Từ Sheets';
+      }
+    });
+  }
+
   // Nút Nạp Lại Mẫu Dữ Liệu
   if (btnResetDb && window.EaSupDB) {
     btnResetDb.addEventListener('click', async () => {
@@ -604,6 +640,22 @@ function initAdminDashboard() {
       }).join('');
     }
 
+    let driveLinksHtml = '';
+    if (item.drive_links && item.drive_links.length > 0) {
+      driveLinksHtml = `
+        <div style="margin-top:10px; padding:8px 12px; background:#ECFDF5; border:1px solid #A7F3D0; border-radius:6px;">
+          <strong style="color:#065F46; font-size:0.88rem;">📁 Tệp lưu trữ trên Google Drive:</strong>
+          <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:8px;">
+            ${item.drive_links.map(link => `
+              <a href="${link.url}" target="_blank" rel="noopener noreferrer" style="background:#10B981; color:#FFFFFF; padding:5px 12px; border-radius:4px; text-decoration:none; font-size:0.82rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                📂 Mở "${link.name}" ↗
+              </a>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
     adminDetailContent.innerHTML = `
       <div style="background:#FFFDF0; border:1px solid #FDE68A; padding:12px; border-radius:6px; margin-bottom:12px;">
         <strong style="color:var(--primary-red); font-size:1.05rem;">Mã hồ sơ: ${item.ticket_code}</strong> | 
@@ -619,6 +671,7 @@ function initAdminDashboard() {
       <div style="margin-bottom:12px;">
         <strong>Tài liệu/Hình ảnh đính kèm:</strong><br>
         ${attachListHtml}
+        ${driveLinksHtml}
       </div>
     `;
 

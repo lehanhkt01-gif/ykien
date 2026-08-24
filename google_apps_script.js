@@ -1,5 +1,5 @@
 // ==============================================================================
-// GOOGLE APPS SCRIPT - TỰ ĐỘNG LƯU PHẢN ÁNH CỬ TRI VÀ TỆP TIN VÀO GOOGLE DRIVE & GOOGLE SHEETS
+// GOOGLE APPS SCRIPT - TỰ ĐỘNG LƯU & ĐỒNG BỘ HAI CHIỀU GOOGLE DRIVE & GOOGLE SHEETS
 // Dành cho tài khoản: lehanhkt01@gmail.com
 // Cơ quan: Ủy ban Mặt trận Tổ quốc Việt Nam Xã Ea Súp, Tỉnh Đắk Lắk
 // ==============================================================================
@@ -7,26 +7,18 @@
 const FOLDER_NAME = "HỒ SƠ PHẢN ÁNH CỬ TRI - XÃ EA SÚP";
 
 /**
- * ==============================================================================
- * BƯỚC QUAN TRỌNG: HÀM CHẠY THỬ NGHIỆM & CẤP QUYỀN TRUY CẬP GOOGLE DRIVE
- * ==============================================================================
- * Hãy chọn hàm này ở thanh công cụ phía trên và bấm nút "Chạy" (Run) 1 lần:
- * Google sẽ hiện cửa sổ yêu cầu cấp quyền truy cập Google Drive và Google Sheets.
- * Bạn chọn tài khoản lehanhkt01@gmail.com -> Nâng cao -> Đi tới dự án -> Cho phép!
+ * 1. Hàm kiểm tra và cấp quyền truy cập Drive & Sheets
  */
 function testDriveAndSheetSetup() {
   Logger.log("=== BẮT ĐẦU KIỂM TRA QUYỀN GOOGLE DRIVE VÀ SHEETS ===");
   
-  // 1. Kiểm tra quyền Google Sheets
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   setupSheetHeaders(sheet);
   Logger.log("✓ Đã kết nối thành công Google Sheets: " + sheet.getName());
 
-  // 2. Kiểm tra quyền Google Drive
   const folder = getOrCreateDriveFolder();
   Logger.log("✓ Đã tạo/kết nối thành công Thư mục Google Drive: " + folder.getName() + " (ID: " + folder.getId() + ")");
 
-  // 3. Tạo một tệp thử nghiệm trên Drive
   const testBlob = Utilities.newBlob("Thử nghiệm lưu tệp thành công từ Cổng thông tin MTTQ Xã Ea Súp!", "text/plain", "kiem_tra_ket_noi.txt");
   const testFile = folder.createFile(testBlob);
   try {
@@ -34,7 +26,6 @@ function testDriveAndSheetSetup() {
   } catch(e) {}
   Logger.log("✓ Đã tạo tệp thử nghiệm trên Drive thành công: " + testFile.getUrl());
 
-  // 4. Thêm dòng ghi nhận vào Sheets
   const timestamp = Utilities.formatDate(new Date(), "GMT+7", "dd/MM/yyyy HH:mm:ss");
   sheet.appendRow([
     timestamp,
@@ -51,7 +42,7 @@ function testDriveAndSheetSetup() {
     "Hệ thống đã sẵn sàng nhận tệp và phản ánh từ cử tri!"
   ]);
 
-  Logger.log("=== THIẾT LẬP THÀNH CÔNG 100%! BẠN CÓ THỂ TRIỂN KHAI (DEPLOY) WEB APP NGAY ===");
+  Logger.log("=== THIẾT LẬP THÀNH CÔNG 100%! ===");
 }
 
 /**
@@ -76,7 +67,7 @@ function getOrCreateDriveFolder() {
 }
 
 /**
- * 1. Tự động tạo và định dạng tiêu đề các cột trong Google Sheets
+ * Tự động tạo và định dạng tiêu đề các cột trong Google Sheets
  */
 function setupSheetHeaders(sheet) {
   const headers = [
@@ -97,7 +88,6 @@ function setupSheetHeaders(sheet) {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
     
-    // Định dạng tiêu đề màu Đỏ - Vàng trang trọng
     const headerRange = sheet.getRange(1, 1, 1, headers.length);
     headerRange.setBackground("#C8102E");
     headerRange.setFontColor("#FFFFFF");
@@ -112,28 +102,108 @@ function setupSheetHeaders(sheet) {
 }
 
 /**
- * 2. Xử lý khi có dữ liệu POST gửi từ Website
+ * 2. Xử lý khi có dữ liệu POST gửi từ Website (Lưu vào Sheets & Drive)
  */
 function doPost(e) {
   return handleIncomingData(e);
 }
 
 /**
- * 3. Xử lý khi có dữ liệu GET
+ * 3. Xử lý khi Website gọi GET -> Trả về danh sách tất cả các dòng để Đồng Bộ về Website!
  */
 function doGet(e) {
   if (e && e.parameter && (e.parameter.ticket_code || e.parameter.title)) {
     return handleIncomingData(e);
   }
   
-  return ContentService
-    .createTextOutput(JSON.stringify({ 
-      "status": "active", 
-      "agency": "UBMTTQ Việt Nam Xã Ea Súp",
-      "drive_folder": FOLDER_NAME,
-      "message": "Kết nối Google Drive & Sheets hoạt động bình thường!" 
-    }))
-    .setMimeType(ContentService.MimeType.JSON);
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ 
+          status: "success", 
+          count: 0, 
+          data: [] 
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const range = sheet.getRange(2, 1, lastRow - 1, 12);
+    const values = range.getValues();
+    const records = [];
+
+    for (let i = 0; i < values.length; i++) {
+      const row = values[i];
+      const code = String(row[1] || '').trim();
+      if (!code) continue;
+
+      let fileCount = parseInt(row[8]) || 0;
+      let driveLinks = [];
+      const driveStr = String(row[9] || '').trim();
+      
+      if (driveStr) {
+        const lines = driveStr.split('\n');
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed.includes('http')) {
+            const idx = trimmed.indexOf('http');
+            const namePart = trimmed.substring(0, idx).replace(/[:\-\s]+$/, '').trim();
+            const urlPart = trimmed.substring(idx).trim();
+            driveLinks.push({
+              name: namePart || 'Tệp đính kèm trên Drive',
+              url: urlPart
+            });
+          }
+        });
+        if (driveLinks.length > 0 && fileCount === 0) {
+          fileCount = driveLinks.length;
+        }
+      }
+
+      const statusText = String(row[10] || 'Mới tiếp nhận').trim();
+      let statusCode = 'RECEIVED';
+      if (statusText === 'Đã hoàn tất xử lý' || statusText.toLowerCase().includes('hoàn tất')) {
+        statusCode = 'COMPLETED';
+      } else if (statusText === 'Đang thẩm tra, xử lý' || statusText.toLowerCase().includes('thẩm tra') || statusText.toLowerCase().includes('xử lý')) {
+        statusCode = 'PROCESSING';
+      }
+
+      records.push({
+        ticket_code: code,
+        sender_name: String(row[2] || 'Cử tri ẩn danh'),
+        sender_phone: String(row[3] || ''),
+        village: String(row[4] || 'Xã Ea Súp'),
+        village_name: String(row[4] || 'Xã Ea Súp'),
+        category: String(row[5] || 'Lĩnh vực khác'),
+        category_name: String(row[5] || 'Lĩnh vực khác'),
+        title: String(row[6] || '(Không có tiêu đề)'),
+        content: String(row[7] || ''),
+        file_count: fileCount,
+        drive_links: driveLinks,
+        status_label: statusText,
+        status_code: statusCode,
+        response_content: String(row[11] || ''),
+        created_at: String(row[0] || new Date().toISOString())
+      });
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ 
+        status: "success", 
+        count: records.length, 
+        data: records 
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ 
+        status: "error", 
+        message: err.toString() 
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 /**
@@ -154,7 +224,6 @@ function handleIncomingData(e) {
 
     let data = {};
 
-    // Đọc dữ liệu từ postData (JSON string) hoặc parameters
     if (e && e.postData && e.postData.contents) {
       try {
         data = JSON.parse(e.postData.contents);
@@ -177,14 +246,12 @@ function handleIncomingData(e) {
     const ticketCode = data.ticket_code || "EASUP-PA-" + Math.floor(100000 + Math.random() * 900000);
     const senderName = data.sender_name || "Cử tri ẩn danh";
     const senderPhone = data.sender_phone || "";
-    const village = data.village || "";
-    const category = data.category || "";
+    const village = data.village || data.village_name || "";
+    const category = data.category || data.category_name || "";
     const title = data.title || "Ý kiến phản ánh cử tri";
     const content = data.content || "";
     
-    // ==========================================================
-    // XỬ LÝ LƯU TỆP TIN VÀO GOOGLE DRIVE
-    // ==========================================================
+    // Lưu tệp vào Google Drive
     let fileCount = 0;
     const driveFileLinks = [];
     let mainFolder;
@@ -198,111 +265,72 @@ function handleIncomingData(e) {
     if (data.attachments && Array.isArray(data.attachments) && data.attachments.length > 0) {
       fileCount = data.attachments.length;
 
-      // Thư mục lưu tệp cho từng hồ sơ
-      let targetFolder = mainFolder;
-      if (mainFolder) {
-        try {
-          targetFolder = mainFolder.createFolder(ticketCode + " - " + senderName);
-        } catch (subErr) {
-          targetFolder = mainFolder;
-        }
-      }
-
       data.attachments.forEach(function(att, idx) {
         try {
-          const fileName = att.name || ("tep_dinh_kem_" + (idx + 1));
-          let base64Data = att.data || "";
-
-          // Tách tiền tố data URI nếu có (VD: "data:image/jpeg;base64,...")
-          let mimeType = att.type || "application/octet-stream";
-          if (base64Data.indexOf(",") > -1) {
-            const prefix = base64Data.substring(0, base64Data.indexOf(","));
-            if (prefix.indexOf(":") > -1 && prefix.indexOf(";") > -1) {
-              mimeType = prefix.substring(prefix.indexOf(":") + 1, prefix.indexOf(";"));
-            }
-            base64Data = base64Data.substring(base64Data.indexOf(",") + 1);
-          }
-
-          // Loại bỏ khoảng trắng hoặc xuống dòng nếu có
-          base64Data = base64Data.replace(/(\r\n|\n|\r|\s)/gm, "");
-
-          if (base64Data && base64Data.length > 10) {
-            // Giải mã Base64 sang Bytes và tạo file trên Google Drive
+          if (att.data && typeof att.data === "string" && att.data.indexOf("base64,") !== -1) {
+            const base64Data = att.data.split("base64,")[1];
             const decodedBytes = Utilities.base64Decode(base64Data);
-            const blob = Utilities.newBlob(decodedBytes, mimeType, fileName);
-            
-            let createdFile;
-            if (targetFolder) {
-              createdFile = targetFolder.createFile(blob);
-            } else {
-              createdFile = DriveApp.createFile(blob);
-            }
-            
-            // Mở quyền xem qua link
-            try {
-              createdFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-            } catch (shareErr) {}
+            const contentType = att.type || "application/octet-stream";
+            const originalFileName = att.name || ("Dinh_kem_" + (idx + 1));
+            const safeFileName = ticketCode + "_" + (idx + 1) + "_" + originalFileName;
 
-            const fileUrl = createdFile.getUrl();
-            driveFileLinks.push(fileName + ": " + fileUrl);
-          } else {
-            driveFileLinks.push(fileName + " (Không nhận được dữ liệu Base64)");
+            const blob = Utilities.newBlob(decodedBytes, contentType, safeFileName);
+            
+            if (mainFolder) {
+              const driveFile = mainFolder.createFile(blob);
+              try {
+                driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+              } catch (shareErr) {}
+
+              driveFileLinks.push(originalFileName + ": " + driveFile.getUrl());
+            }
           }
         } catch (fileErr) {
-          driveFileLinks.push((att.name || "Tệp") + " (Lỗi lưu Drive: " + fileErr.message + ")");
+          Logger.log("Lỗi xử lý file " + idx + ": " + fileErr.toString());
         }
       });
     }
 
-    let filesCellContent = "Không đính kèm tệp";
-    if (driveFileLinks.length > 0) {
-      filesCellContent = driveFileLinks.join("\n");
-    }
-
+    const driveLinksText = driveFileLinks.length > 0 ? driveFileLinks.join("\n") : "Không có tệp đính kèm";
     const statusLabel = data.status_label || "Mới tiếp nhận";
-    const responseContent = data.response_content || "UBMTTQ Xã đã tiếp nhận, đang phân loại giải quyết.";
+    const responseContent = data.response_content || "Ủy ban MTTQ Việt Nam Xã Ea Súp đã tiếp nhận và đang xử lý.";
 
-    // Thêm một dòng mới vào Bảng tính Google Sheets
+    // Ghi vào Google Sheets
     sheet.appendRow([
       timestamp,
       ticketCode,
       senderName,
-      senderPhone ? "'" + senderPhone : "", // Thêm dấu ' để giữ số 0 đầu điện thoại
+      senderPhone,
       village,
       category,
       title,
       content,
       fileCount,
-      filesCellContent,
+      driveLinksText,
       statusLabel,
       responseContent
     ]);
 
-    // Định dạng dòng mới
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow, 1, 1, 12).setVerticalAlignment("top");
-    sheet.getRange(lastRow, 1).setHorizontalAlignment("center");
-    sheet.getRange(lastRow, 2).setHorizontalAlignment("center").setFontWeight("bold").setFontColor("#C8102E");
-    sheet.getRange(lastRow, 4).setHorizontalAlignment("center");
-    sheet.getRange(lastRow, 9).setHorizontalAlignment("center");
-    sheet.getRange(lastRow, 10).setWrap(true);
-    sheet.getRange(lastRow, 11).setHorizontalAlignment("center").setFontWeight("bold");
+    // Định dạng dòng vừa thêm
+    const lastRowIndex = sheet.getLastRow();
+    const rowRange = sheet.getRange(lastRowIndex, 1, 1, 12);
+    rowRange.setVerticalAlignment("middle");
+    rowRange.setFontSize(10);
+    sheet.setRowHeight(lastRowIndex, 28);
 
     return ContentService
       .createTextOutput(JSON.stringify({ 
-        "result": "success", 
-        "ticket_code": ticketCode,
-        "drive_links": driveFileLinks,
-        "row": lastRow 
+        "status": "success", 
+        "ticket_code": ticketCode, 
+        "drive_files_saved": driveFileLinks.length,
+        "message": "Đã lưu thông tin và tệp đính kèm vào Google Drive & Google Sheets thành công!" 
       }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
+    Logger.log("Lỗi xử lý handleIncomingData: " + error.toString());
     return ContentService
-      .createTextOutput(JSON.stringify({ 
-        "result": "error", 
-        "message": error.toString() 
-      }))
+      .createTextOutput(JSON.stringify({ "status": "error", "message": error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   } finally {
     try {

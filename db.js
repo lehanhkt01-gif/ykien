@@ -425,6 +425,77 @@ const EaSupDB = (() => {
     }
   }
 
+  // 8. Đồng bộ dữ liệu từ Google Sheets & Google Drive về hệ thống
+  async function syncFromGoogleSheets(customUrl = null) {
+    const url = customUrl || localStorage.getItem('easup_google_sheets_url');
+    if (!url) return { success: false, message: 'Chưa có cấu hình URL Google Sheets' };
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        cache: 'no-cache'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result && result.status === 'success' && Array.isArray(result.data)) {
+        const sheetRecords = result.data;
+        if (sheetRecords.length === 0) {
+          return { success: true, count: 0, message: 'Google Sheets hiện đang rỗng' };
+        }
+
+        const localList = getLocalStorageData();
+        const map = new Map();
+
+        // Nạp dữ liệu cũ vào map
+        localList.forEach(item => {
+          if (item.ticket_code) map.set(item.ticket_code, item);
+        });
+
+        // Hợp nhất dữ liệu mới từ Google Sheets
+        sheetRecords.forEach(sheetItem => {
+          if (sheetItem.ticket_code) {
+            const existing = map.get(sheetItem.ticket_code) || {};
+            map.set(sheetItem.ticket_code, {
+              ...existing,
+              ...sheetItem,
+              village: sheetItem.village || existing.village || 'Xã Ea Súp',
+              village_name: sheetItem.village || existing.village || 'Xã Ea Súp',
+              category: sheetItem.category || existing.category || 'Lĩnh vực khác',
+              category_name: sheetItem.category || existing.category || 'Lĩnh vực khác',
+              drive_links: sheetItem.drive_links || existing.drive_links || []
+            });
+          }
+        });
+
+        const mergedList = Array.from(map.values());
+        mergedList.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+        saveLocalStorageData(mergedList);
+
+        // Đồng bộ ngầm vào IndexedDB
+        try {
+          const db = await openDB();
+          if (db) {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            mergedList.forEach(item => store.put(item));
+          }
+        } catch(e) {}
+
+        return { success: true, count: sheetRecords.length, data: mergedList };
+      } else {
+        return { success: false, message: result.message || 'Không đọc được cấu trúc dữ liệu từ Google Sheets' };
+      }
+    } catch (err) {
+      console.warn('Lỗi khi syncFromGoogleSheets:', err);
+      return { success: false, message: err.message };
+    }
+  }
+
   // Khởi tạo ngay lập tức khi file script được load
   getLocalStorageData();
 
@@ -436,6 +507,7 @@ const EaSupDB = (() => {
     updateStatus: updateStatus,
     delete: deleteFeedback,
     resetToDefault: resetToDefault,
+    syncFromGoogleSheets: syncFromGoogleSheets,
     exportData: exportData
   };
 })();
