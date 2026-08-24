@@ -425,7 +425,26 @@ const EaSupDB = (() => {
     }
   }
 
-  // 8. Đồng bộ dữ liệu từ Google Sheets & Google Drive về hệ thống
+  // 8. Xóa toàn bộ dữ liệu mẫu (chỉ giữ lại dữ liệu thực tế)
+  async function clearMockData() {
+    const mockCodes = ['EASUP-PA-892415', 'EASUP-PA-671239', 'EASUP-PA-452108', 'EASUP-PA-319874', 'EASUP-PA-208915', 'EASUP-PA-110293'];
+    const current = getLocalStorageData();
+    const realData = current.filter(item => !mockCodes.includes(item.ticket_code));
+    saveLocalStorageData(realData);
+
+    try {
+      const db = await openDB();
+      if (db) {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        mockCodes.forEach(code => store.delete(code));
+      }
+    } catch(e) {}
+
+    return realData;
+  }
+
+  // 9. Đồng bộ chuẩn xác 100% từ Google Sheets & Google Drive về hệ thống
   async function syncFromGoogleSheets(customUrl = null) {
     const url = customUrl || localStorage.getItem('easup_google_sheets_url');
     if (!url) return { success: false, message: 'Chưa có cấu hình URL Google Sheets' };
@@ -443,50 +462,34 @@ const EaSupDB = (() => {
       const result = await response.json();
       if (result && result.status === 'success' && Array.isArray(result.data)) {
         const sheetRecords = result.data;
-        if (sheetRecords.length === 0) {
-          return { success: true, count: 0, message: 'Google Sheets hiện đang rỗng' };
-        }
 
-        const localList = getLocalStorageData();
-        const map = new Map();
-
-        // Nạp dữ liệu cũ vào map
-        localList.forEach(item => {
-          if (item.ticket_code) map.set(item.ticket_code, item);
-        });
-
-        // Hợp nhất dữ liệu mới từ Google Sheets
-        sheetRecords.forEach(sheetItem => {
-          if (sheetItem.ticket_code) {
-            const existing = map.get(sheetItem.ticket_code) || {};
-            map.set(sheetItem.ticket_code, {
-              ...existing,
-              ...sheetItem,
-              village: sheetItem.village || existing.village || 'Xã Ea Súp',
-              village_name: sheetItem.village || existing.village || 'Xã Ea Súp',
-              category: sheetItem.category || existing.category || 'Lĩnh vực khác',
-              category_name: sheetItem.category || existing.category || 'Lĩnh vực khác',
-              drive_links: sheetItem.drive_links || existing.drive_links || []
-            });
+        // Chuẩn hóa danh sách từ Google Sheets
+        sheetRecords.forEach(item => {
+          if (!item.village) item.village = item.village_name || 'Xã Ea Súp';
+          if (!item.category) item.category = item.category_name || 'Lĩnh vực khác';
+          if (!item.status_label) {
+            if (item.status_code === 'COMPLETED') item.status_label = 'Đã hoàn tất xử lý';
+            else if (item.status_code === 'PROCESSING') item.status_label = 'Đang thẩm tra, xử lý';
+            else item.status_label = 'Mới tiếp nhận';
           }
         });
 
-        const mergedList = Array.from(map.values());
-        mergedList.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        sheetRecords.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-        saveLocalStorageData(mergedList);
+        // THAY THẾ HOÀN TOÀN DỮ LIỆU NỘI BỘ BẰNG DỮ LIỆU CHUẨN TRÊN GOOGLE SHEETS
+        saveLocalStorageData(sheetRecords);
 
-        // Đồng bộ ngầm vào IndexedDB
         try {
           const db = await openDB();
           if (db) {
             const tx = db.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
-            mergedList.forEach(item => store.put(item));
+            store.clear();
+            sheetRecords.forEach(item => store.put(item));
           }
         } catch(e) {}
 
-        return { success: true, count: sheetRecords.length, data: mergedList };
+        return { success: true, count: sheetRecords.length, data: sheetRecords };
       } else {
         return { success: false, message: result.message || 'Không đọc được cấu trúc dữ liệu từ Google Sheets' };
       }
@@ -507,6 +510,7 @@ const EaSupDB = (() => {
     updateStatus: updateStatus,
     delete: deleteFeedback,
     resetToDefault: resetToDefault,
+    clearMockData: clearMockData,
     syncFromGoogleSheets: syncFromGoogleSheets,
     exportData: exportData
   };

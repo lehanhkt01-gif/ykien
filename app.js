@@ -576,7 +576,7 @@ function initAdminDashboard() {
     }
   }
 
-  // Nút Đồng Bộ Từ Google Sheets & Drive
+  // Nút Đồng Bộ Chuẩn Xác 100% Từ Google Sheets & Drive
   const btnSyncGsheet = document.getElementById('btn-sync-gsheet');
   if (btnSyncGsheet && window.EaSupDB) {
     btnSyncGsheet.addEventListener('click', async () => {
@@ -592,16 +592,34 @@ function initAdminDashboard() {
       try {
         const res = await EaSupDB.syncFromGoogleSheets(url);
         if (res.success) {
+          if (searchInput) searchInput.value = '';
+          if (filterVillage) filterVillage.value = '';
+          if (filterStatus) filterStatus.value = '';
           await renderAdminTable();
-          alert(`✓ ĐÃ ĐỒNG BỘ THÀNH CÔNG!\n\nĐã đồng bộ ${res.count} dòng từ Google Sheets & Google Drive về Bảng quản lý.`);
+          alert(`✓ ĐÃ ĐỒNG BỘ THÀNH CÔNG!\n\nĐã xóa dữ liệu ảo và đồng bộ chính xác ${res.count} dòng từ Google Sheets & Google Drive về Bảng quản lý.`);
         } else {
-          alert(`⚠️ Thông báo từ Google Sheets: ${res.message}`);
+          alert(`⚠️ Thông báo từ Google Sheets: ${res.message}\n\n👉 Lưu ý: Bạn nhớ cập nhật mã mới vào Google Apps Script và Triển khai (Deploy) phiên bản mới nhé!`);
         }
       } catch (err) {
         alert(`Lỗi khi đồng bộ: ${err.message}`);
       } finally {
         btnSyncGsheet.disabled = false;
-        btnSyncGsheet.innerHTML = '☁️ Đồng Bộ Từ Sheets';
+        btnSyncGsheet.innerHTML = '☁️ Đồng Bộ Chuẩn Theo Sheet';
+      }
+    });
+  }
+
+  // Nút Xóa Dữ Liệu Ảo (Chỉ giữ lại dữ liệu thực tế)
+  const btnClearMock = document.getElementById('btn-clear-mock');
+  if (btnClearMock && window.EaSupDB) {
+    btnClearMock.addEventListener('click', async () => {
+      if (confirm('Bạn có chắc chắn muốn xóa toàn bộ 6 hồ sơ mẫu ảo ban đầu và chỉ giữ lại dữ liệu thực tế không?')) {
+        await EaSupDB.clearMockData();
+        if (searchInput) searchInput.value = '';
+        if (filterVillage) filterVillage.value = '';
+        if (filterStatus) filterStatus.value = '';
+        await renderAdminTable();
+        alert('✓ Đã xóa sạch toàn bộ hồ sơ mẫu ảo! Bảng hiện tại chỉ hiển thị dữ liệu thực tế.');
       }
     });
   }
