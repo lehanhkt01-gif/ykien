@@ -510,7 +510,7 @@ function initLookupSystem() {
       resultBox.innerHTML = `
         <div style="border-left: 4px solid #EF4444; padding-left: 14px;">
           <strong style="color:#DC2626; font-size:1rem;">Không tìm thấy hồ sơ mã: ${code}</strong>
-          <p style="font-size:0.88rem; color:#4B5563; margin-top:4px;">Vui lòng kiểm tra lại mã hồ sơ hoặc liên hệ đường dây nóng <strong>0262.3688.115</strong> để được hỗ trợ tra cứu trực tiếp.</p>
+          <p style="font-size:0.88rem; color:#4B5563; margin-top:4px;">Vui lòng kiểm tra lại mã hồ sơ hoặc liên hệ đường dây nóng <strong>0888.023.023</strong> (Zalo: <strong>Mặt trận Ea Súp</strong>) để được hỗ trợ tra cứu trực tiếp.</p>
         </div>
       `;
     }
