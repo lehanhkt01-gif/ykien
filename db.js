@@ -462,10 +462,17 @@ const EaSupDB = (() => {
     return realData;
   }
 
+  const DEFAULT_GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx3V7ICaLWc60H-6XIQRQKBI-N2vy7Hbm4b5FjcroiuX1b9lqfQIprGBFQ-JDlbzcW1/exec';
+
   // 9. Đồng bộ chuẩn xác 100% từ Google Sheets & Google Drive về hệ thống
   async function syncFromGoogleSheets(customUrl = null) {
-    const url = customUrl || localStorage.getItem('easup_google_sheets_url');
+    const url = customUrl || localStorage.getItem('easup_google_sheets_url') || DEFAULT_GOOGLE_SHEETS_URL;
     if (!url) return { success: false, message: 'Chưa có cấu hình URL Google Sheets' };
+
+    // Tự động lưu URL mặc định vào localStorage nếu chưa có
+    if (!localStorage.getItem('easup_google_sheets_url')) {
+      try { localStorage.setItem('easup_google_sheets_url', DEFAULT_GOOGLE_SHEETS_URL); } catch (e) {}
+    }
 
     try {
       const response = await fetch(url, {

@@ -232,6 +232,76 @@ function initFileUpload() {
   }
 }
 
+const DEFAULT_GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx3V7ICaLWc60H-6XIQRQKBI-N2vy7Hbm4b5FjcroiuX1b9lqfQIprGBFQ-JDlbzcW1/exec';
+
+// Nén và tối ưu tệp ảnh chụp từ camera điện thoại trước khi tải lên
+async function processFileForUpload(file) {
+  if (file.type && file.type.startsWith('image/')) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDimension = 1600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Nén định dạng JPEG 0.82 (giảm từ 10MB xuống ~300KB cực nhanh)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          resolve({
+            name: file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+            size: Math.round(compressedDataUrl.length * 0.75),
+            type: 'image/jpeg',
+            data: compressedDataUrl
+          });
+        };
+        img.onerror = () => {
+          resolve({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            data: e.target.result
+          });
+        };
+        img.src = e.target.result;
+      };
+      reader.onerror = () => {
+        resolve({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          data: ''
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  } else {
+    const base64Data = await fileToBase64(file);
+    return {
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      data: base64Data
+    };
+  }
+}
+
 // Chuyển File sang Base64 để lưu vào Database
 function fileToBase64(file) {
   return new Promise((resolve) => {
@@ -242,7 +312,7 @@ function fileToBase64(file) {
   });
 }
 
-// 3. Xử lý Form Gửi Ý kiến / Phản ánh Cử tri -> Lưu vào Database
+// 3. Xử lý Form Gửi Ý kiến / Phản ánh Cử tri -> Lưu vào Database & Google Sheets
 function initFeedbackForm() {
   const form = document.getElementById('feedback-form');
   const modal = document.getElementById('success-modal');
@@ -275,25 +345,20 @@ function initFeedbackForm() {
     const submitBtn = form.querySelector('.btn-submit-feedback');
     const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span>⏳ Đang lưu vào cơ sở dữ liệu...</span>`;
+    submitBtn.innerHTML = `<span>⏳ Đang gửi phản ánh & lưu trữ đám mây...</span>`;
 
     try {
-      // Đọc tệp đính kèm sang mảng Base64
+      // Đọc và tối ưu tệp đính kèm sang mảng Base64
       const attachmentsData = [];
       for (const file of selectedFiles) {
-        const base64Content = await fileToBase64(file);
-        attachmentsData.push({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          data: base64Content
-        });
+        const processed = await processFileForUpload(file);
+        attachmentsData.push(processed);
       }
 
       // Tạo mã hồ sơ chuẩn
       const randomCode = 'EASUP-PA-' + Math.floor(100000 + Math.random() * 900000);
 
-      // Lưu vào Database
+      // Lưu vào Database nội bộ
       const feedbackRecord = {
         ticket_code: randomCode,
         sender_name: name,
@@ -312,8 +377,8 @@ function initFeedbackForm() {
         await EaSupDB.insert(feedbackRecord);
       }
 
-      // TỰ ĐỘNG GỬI SANG GOOGLE SHEETS (lehanhkt01@gmail.com)
-      sendToGoogleSheets(feedbackRecord);
+      // TỰ ĐỘNG GỬI SANG GOOGLE SHEETS & GOOGLE DRIVE (lehanhkt01@gmail.com)
+      await sendToGoogleSheets(feedbackRecord);
 
       // Cập nhật thông tin trong Modal
       document.getElementById('modal-ticket-code').textContent = randomCode;
@@ -488,6 +553,15 @@ function initAdminDashboard() {
     if (adminModal) {
       adminModal.classList.add('active');
       await renderAdminTable();
+
+      // Tự động đồng bộ dữ liệu mới nhất từ Google Sheets gửi từ điện thoại cử tri
+      if (window.EaSupDB && EaSupDB.syncFromGoogleSheets) {
+        EaSupDB.syncFromGoogleSheets().then(res => {
+          if (res && res.success) {
+            renderAdminTable();
+          }
+        }).catch(() => {});
+      }
     }
   }
 
@@ -925,11 +999,16 @@ function initAdminDashboard() {
 // HÀM TỰ ĐỘNG GỬI DỮ LIỆU SANG GOOGLE SHEETS & GOOGLE DRIVE
 // ============================================================
 async function sendToGoogleSheets(feedbackRecord, overrideUrl = null) {
-  const gsheetUrl = overrideUrl || localStorage.getItem('easup_google_sheets_url');
+  const gsheetUrl = overrideUrl || localStorage.getItem('easup_google_sheets_url') || DEFAULT_GOOGLE_SHEETS_URL;
   
   if (!gsheetUrl) {
     console.log('Chưa thiết lập URL Google Apps Script. Dữ liệu đã lưu an toàn trong CSDL nội bộ.');
     return;
+  }
+
+  // Tự động lưu URL mặc định vào localStorage của thiết bị nếu chưa có
+  if (!localStorage.getItem('easup_google_sheets_url')) {
+    try { localStorage.setItem('easup_google_sheets_url', DEFAULT_GOOGLE_SHEETS_URL); } catch (e) {}
   }
 
   try {
@@ -951,9 +1030,9 @@ async function sendToGoogleSheets(feedbackRecord, overrideUrl = null) {
       response_content: feedbackRecord.response_content || ''
     };
 
-    // Tạo timeout 8 giây qua AbortController để không bị treo nút gửi
+    // Tạo timeout 25 giây qua AbortController để đảm bảo kết nối mạng 4G/WiFi di động gửi thành công 100%
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
       await fetch(gsheetUrl, {
