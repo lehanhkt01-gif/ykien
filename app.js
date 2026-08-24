@@ -47,19 +47,30 @@ function formatVNDateOnly(val) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Khởi tạo cơ sở dữ liệu
+  // 1. Khởi tạo cơ sở dữ liệu
   if (window.EaSupDB) {
-    await EaSupDB.init();
+    try { await EaSupDB.init(); } catch (e) { console.warn('EaSupDB init err:', e); }
   }
 
-  initRealtimeClock();
-  initFileUpload();
-  initFeedbackForm();
-  initLookupSystem();
-  initFaqAccordion();
-  initSamplePrompts();
-  initAdminDashboard();
-  initAdminAuth();
+  // 2. Khởi tạo các module giao diện
+  const inits = [
+    initRealtimeClock,
+    initFileUpload,
+    initFeedbackForm,
+    initLookupSystem,
+    initFaqAccordion,
+    initSamplePrompts,
+    initAdminDashboard,
+    initAdminAuth
+  ];
+
+  inits.forEach(fn => {
+    try {
+      if (typeof fn === 'function') fn();
+    } catch (err) {
+      console.warn(`Lỗi khởi tạo module ${fn.name}:`, err);
+    }
+  });
 });
 
 // 1. Đồng hồ thời gian thực tiếng Việt
