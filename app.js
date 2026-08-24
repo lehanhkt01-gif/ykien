@@ -337,15 +337,56 @@ function initLookupSystem() {
     resultBox.style.display = 'block';
     resultBox.innerHTML = '<div style="text-align:center; padding:10px; color:#6B7280;">⏳ Đang truy vấn cơ sở dữ liệu...</div>';
 
+// Hàm tiện ích định dạng ngày giờ chuẩn tiếng Việt, xử lý cả ISO string lẫn dd/MM/yyyy từ Google Sheets
+function formatVNTime(val) {
+  if (!val) return 'Mới gửi';
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+      return s;
+    }
+  }
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${mins}`;
+    }
+  } catch (e) {}
+  return String(val);
+}
+
+function formatVNDateOnly(val) {
+  if (!val) return 'Mới gửi';
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+      return s.split(' ')[0];
+    }
+  }
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  } catch (e) {}
+  return String(val);
+}
+
     let record = null;
     if (window.EaSupDB) {
       record = await EaSupDB.getByCode(code);
     }
 
     if (record) {
-      const formattedDate = new Date(record.created_at).toLocaleDateString('vi-VN', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
+      const formattedDate = formatVNTime(record.created_at);
 
       let statusBadgeColor = '#059669';
       let statusBgColor = '#ECFDF5';
@@ -531,14 +572,7 @@ function initAdminDashboard() {
           fileTag = `<span style="background:#E0E7FF; color:#3730A3; font-weight:700; padding:2px 8px; border-radius:999px; font-size:0.75rem;">📎 ${fileCount}</span>`;
         }
 
-        let dateStr = 'Mới gửi';
-        if (item.created_at) {
-          try {
-            dateStr = new Date(item.created_at).toLocaleDateString('vi-VN');
-          } catch(e) {
-            dateStr = item.created_at;
-          }
-        }
+        let dateStr = formatVNDateOnly(item.created_at);
 
         const senderVillage = item.village || item.village_name || 'Xã Ea Súp';
         const itemCategory = item.category || item.category_name || 'Lĩnh vực khác';
@@ -555,7 +589,7 @@ function initAdminDashboard() {
           </td>
           <td style="text-align:center;">${fileTag}</td>
           <td><span class="status-badge ${badgeClass}">${item.status_label || 'Mới tiếp nhận'}</span></td>
-          <td style="color:#6B7280; font-size:0.85rem;">${dateStr}</td>
+          <td style="color:#6B7280; font-size:0.85rem; white-space:nowrap;">${dateStr}</td>
           <td style="text-align:center;">
             <button type="button" class="btn-action-view" data-code="${item.ticket_code}">
               Xem & Xử lý
@@ -678,7 +712,8 @@ function initAdminDashboard() {
       <div style="background:#FFFDF0; border:1px solid #FDE68A; padding:12px; border-radius:6px; margin-bottom:12px;">
         <strong style="color:var(--primary-red); font-size:1.05rem;">Mã hồ sơ: ${item.ticket_code}</strong> | 
         <span>Khu vực: <strong>${item.village}</strong></span> | 
-        <span>Lĩnh vực: <strong>${item.category}</strong></span>
+        <span>Lĩnh vực: <strong>${item.category}</strong></span> | 
+        <span>Ngày gửi: <strong>${formatVNTime(item.created_at)}</strong></span>
       </div>
       <p style="margin-bottom:6px;"><strong>Người phản ánh:</strong> ${item.sender_name} ${item.sender_phone ? ' - SĐT: ' + item.sender_phone : ''}</p>
       <p style="margin-bottom:6px;"><strong>Tiêu đề:</strong> ${item.title}</p>

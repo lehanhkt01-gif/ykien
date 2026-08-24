@@ -205,6 +205,24 @@ const EaSupDB = (() => {
     return dbPromise;
   }
 
+  function parseDateForSort(dateStr) {
+    if (!dateStr) return 0;
+    if (typeof dateStr === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}/.test(dateStr.trim())) {
+      const parts = dateStr.trim().split(' ');
+      const dateParts = parts[0].split('/');
+      const timeParts = (parts[1] || '00:00:00').split(':');
+      const day = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1;
+      const year = parseInt(dateParts[2], 10);
+      const hour = parseInt(timeParts[0] || 0, 10);
+      const min = parseInt(timeParts[1] || 0, 10);
+      const sec = parseInt(timeParts[2] || 0, 10);
+      return new Date(year, month, day, hour, min, sec).getTime();
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+
   // 1. Lấy tất cả phản ánh (luôn có dữ liệu)
   async function getAllFeedbacks() {
     let list = [];
@@ -255,7 +273,7 @@ const EaSupDB = (() => {
       }
     });
 
-    list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    list.sort((a, b) => parseDateForSort(b.created_at) - parseDateForSort(a.created_at));
     return list;
   }
 
