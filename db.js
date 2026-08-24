@@ -439,3 +439,9 @@ const EaSupDB = (() => {
     exportData: exportData
   };
 })();
+
+// Đảm bảo gắn biến vào window để các file script khác luôn truy cập được
+if (typeof window !== 'undefined') {
+  window.EaSupDB = EaSupDB;
+}
+
