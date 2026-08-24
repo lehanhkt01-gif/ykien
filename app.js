@@ -448,83 +448,139 @@ function initAdminDashboard() {
   if (footerBtnAdmin) footerBtnAdmin.addEventListener('click', openAdminModal);
   if (btnCloseAdmin) btnCloseAdmin.addEventListener('click', closeAdminModal);
 
+  const btnResetDb = document.getElementById('btn-reset-db');
+
   // Render bảng danh sách từ Database
   async function renderAdminTable() {
-    if (!adminTableBody || !window.EaSupDB) return;
+    if (!adminTableBody) return;
 
-    adminTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#6B7280;">⏳ Đang tải dữ liệu từ CSDL...</td></tr>';
+    try {
+      let allFeedbacks = [];
+      if (window.EaSupDB) {
+        allFeedbacks = await EaSupDB.getAll();
+      }
 
-    let allFeedbacks = await EaSupDB.getAll();
+      // Lọc theo từ khóa
+      const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      if (keyword) {
+        allFeedbacks = allFeedbacks.filter(f => {
+          const code = (f.ticket_code || '').toLowerCase();
+          const name = (f.sender_name || '').toLowerCase();
+          const phone = (f.sender_phone || '').toLowerCase();
+          const village = (f.village || f.village_name || '').toLowerCase();
+          const category = (f.category || f.category_name || '').toLowerCase();
+          const title = (f.title || '').toLowerCase();
+          const content = (f.content || '').toLowerCase();
+          const status = (f.status_label || '').toLowerCase();
+          return code.includes(keyword) || name.includes(keyword) || phone.includes(keyword) ||
+                 village.includes(keyword) || category.includes(keyword) || title.includes(keyword) ||
+                 content.includes(keyword) || status.includes(keyword);
+        });
+      }
 
-    // Lọc theo từ khóa
-    const keyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
-    if (keyword) {
-      allFeedbacks = allFeedbacks.filter(f => 
-        (f.ticket_code && f.ticket_code.toLowerCase().includes(keyword)) ||
-        (f.sender_name && f.sender_name.toLowerCase().includes(keyword)) ||
-        (f.title && f.title.toLowerCase().includes(keyword)) ||
-        (f.content && f.content.toLowerCase().includes(keyword))
-      );
-    }
+      // Lọc theo Thôn/Buôn
+      const villageVal = filterVillage ? filterVillage.value.trim() : '';
+      if (villageVal) {
+        allFeedbacks = allFeedbacks.filter(f => (f.village || f.village_name || '') === villageVal);
+      }
 
-    // Lọc theo Thôn/Buôn
-    const villageVal = filterVillage ? filterVillage.value : '';
-    if (villageVal) {
-      allFeedbacks = allFeedbacks.filter(f => f.village === villageVal);
-    }
+      // Lọc theo Trạng thái
+      const statusVal = filterStatus ? filterStatus.value.trim() : '';
+      if (statusVal) {
+        allFeedbacks = allFeedbacks.filter(f => f.status_code === statusVal);
+      }
 
-    // Lọc theo Trạng thái
-    const statusVal = filterStatus ? filterStatus.value : '';
-    if (statusVal) {
-      allFeedbacks = allFeedbacks.filter(f => f.status_code === statusVal);
-    }
+      if (!allFeedbacks || allFeedbacks.length === 0) {
+        adminTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center; padding:30px 20px; color:#6B7280;">
+              <div style="font-size:1.1rem; margin-bottom:6px;">📭 Không tìm thấy hồ sơ nào phù hợp bộ lọc.</div>
+              <button type="button" id="btn-empty-reset" style="background:#0284C7; color:#FFFFFF; border:none; padding:6px 14px; border-radius:4px; font-size:0.85rem; cursor:pointer; margin-top:8px;">
+                🔄 Khôi phục danh sách mẫu ban đầu
+              </button>
+            </td>
+          </tr>
+        `;
+        const btnEmptyReset = document.getElementById('btn-empty-reset');
+        if (btnEmptyReset && window.EaSupDB) {
+          btnEmptyReset.addEventListener('click', async () => {
+            await EaSupDB.resetToDefault();
+            if (searchInput) searchInput.value = '';
+            if (filterVillage) filterVillage.value = '';
+            if (filterStatus) filterStatus.value = '';
+            await renderAdminTable();
+          });
+        }
+        return;
+      }
 
-    if (allFeedbacks.length === 0) {
-      adminTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:#9CA3AF;">Không tìm thấy hồ sơ phản ánh nào phù hợp.</td></tr>';
-      return;
-    }
+      adminTableBody.innerHTML = '';
+      allFeedbacks.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        let badgeClass = 'received';
+        if (item.status_code === 'COMPLETED') badgeClass = 'completed';
+        else if (item.status_code === 'PROCESSING') badgeClass = 'processing';
 
-    adminTableBody.innerHTML = '';
-    allFeedbacks.forEach(item => {
-      const tr = document.createElement('tr');
-      
-      let badgeClass = 'received';
-      if (item.status_code === 'COMPLETED') badgeClass = 'completed';
-      else if (item.status_code === 'PROCESSING') badgeClass = 'processing';
+        const fileCount = (item.attachments && item.attachments.length) || 0;
+        const fileTag = fileCount > 0 
+          ? `<span style="background:#E0E7FF; color:#3730A3; font-weight:700; padding:2px 8px; border-radius:999px; font-size:0.75rem;">📎 ${fileCount}</span>`
+          : `<span style="color:#9CA3AF; font-size:0.8rem;">-</span>`;
 
-      const fileCount = (item.attachments && item.attachments.length) || 0;
-      const fileTag = fileCount > 0 
-        ? `<span style="background:#E0E7FF; color:#3730A3; font-weight:700; padding:2px 8px; border-radius:999px; font-size:0.75rem;">📎 ${fileCount}</span>`
-        : `<span style="color:#9CA3AF; font-size:0.8rem;">-</span>`;
+        let dateStr = 'Mới gửi';
+        if (item.created_at) {
+          try {
+            dateStr = new Date(item.created_at).toLocaleDateString('vi-VN');
+          } catch(e) {}
+        }
 
-      const dateStr = new Date(item.created_at).toLocaleDateString('vi-VN');
+        const senderVillage = item.village || item.village_name || 'Xã Ea Súp';
+        const itemCategory = item.category || item.category_name || 'Lĩnh vực khác';
 
-      tr.innerHTML = `
-        <td><strong style="color:var(--primary-red);">${item.ticket_code}</strong></td>
-        <td>
-          <div style="font-weight:600; color:#1F2937;">${item.sender_name}</div>
-          <div style="font-size:0.78rem; color:#6B7280;">${item.village} ${item.sender_phone ? '• ' + item.sender_phone : ''}</div>
-        </td>
-        <td>
-          <div style="font-weight:600; max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${item.title}">${item.title}</div>
-          <div style="font-size:0.78rem; color:#6B7280;">${item.category}</div>
-        </td>
-        <td style="text-align:center;">${fileTag}</td>
-        <td><span class="status-badge ${badgeClass}">${item.status_label}</span></td>
-        <td style="color:#6B7280;">${dateStr}</td>
-        <td style="text-align:center;">
-          <button type="button" class="btn-action-view" data-code="${item.ticket_code}">
-            Xem & Xử lý
-          </button>
-        </td>
-      `;
+        tr.innerHTML = `
+          <td><strong style="color:var(--primary-red); font-family:monospace; font-size:0.92rem;">${item.ticket_code}</strong></td>
+          <td>
+            <div style="font-weight:600; color:#1F2937;">${item.sender_name || 'Cử tri ẩn danh'}</div>
+            <div style="font-size:0.78rem; color:#6B7280;">${senderVillage} ${item.sender_phone ? '• ' + item.sender_phone : ''}</div>
+          </td>
+          <td>
+            <div style="font-weight:600; max-width:280px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${item.title || ''}">${item.title || '(Không có tiêu đề)'}</div>
+            <div style="font-size:0.78rem; color:#6B7280;">${itemCategory}</div>
+          </td>
+          <td style="text-align:center;">${fileTag}</td>
+          <td><span class="status-badge ${badgeClass}">${item.status_label || 'Mới tiếp nhận'}</span></td>
+          <td style="color:#6B7280; font-size:0.85rem;">${dateStr}</td>
+          <td style="text-align:center;">
+            <button type="button" class="btn-action-view" data-code="${item.ticket_code}">
+              Xem & Xử lý
+            </button>
+          </td>
+        `;
 
-      // Gắn sự kiện xem chi tiết
-      tr.querySelector('.btn-action-view').addEventListener('click', () => {
-        openDetailModal(item);
+        // Gắn sự kiện xem chi tiết
+        tr.querySelector('.btn-action-view').addEventListener('click', () => {
+          openDetailModal(item);
+        });
+
+        adminTableBody.appendChild(tr);
       });
+    } catch (err) {
+      console.error('Lỗi khi renderAdminTable:', err);
+      adminTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#EF4444;">⚠️ Có lỗi khi tải dữ liệu: ${err.message}</td></tr>`;
+    }
+  }
 
-      adminTableBody.appendChild(tr);
+  // Nút Nạp Lại Mẫu Dữ Liệu
+  if (btnResetDb && window.EaSupDB) {
+    btnResetDb.addEventListener('click', async () => {
+      if (confirm('Bạn có chắc chắn muốn nạp lại danh sách dữ liệu mẫu ban đầu không?')) {
+        await EaSupDB.resetToDefault();
+        if (searchInput) searchInput.value = '';
+        if (filterVillage) filterVillage.value = '';
+        if (filterStatus) filterStatus.value = '';
+        await renderAdminTable();
+        alert('✓ Đã khôi phục thành công danh sách hồ sơ mẫu!');
+      }
     });
   }
 
