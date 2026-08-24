@@ -1016,6 +1016,11 @@ function initAdminAuth() {
   const btnOpenAdmin = document.getElementById('btn-open-admin');
   const footerBtnAdmin = document.getElementById('footer-btn-admin');
   const btnAdminLogout = document.getElementById('btn-admin-logout');
+  
+  const adminUserBadge = document.getElementById('admin-user-badge');
+  const adminUserDisplayName = document.getElementById('admin-user-display-name');
+  const modalOfficerName = document.getElementById('modal-officer-name');
+  const footerUserName = document.getElementById('footer-user-name');
 
   const loginModal = document.getElementById('admin-login-modal');
   const btnCloseLogin = document.getElementById('btn-close-login');
@@ -1026,17 +1031,40 @@ function initAdminAuth() {
   const loginRemember = document.getElementById('login-remember');
   const loginErrorMsg = document.getElementById('login-error-msg');
 
+  function getOfficerDisplayName(user) {
+    const u = (user || '').toLowerCase();
+    if (u === 'lehanh' || u === 'lehanhkt01') return 'CB. Lê Hạnh';
+    if (u === 'mttq' || u === 'mttq_easup') return 'CB. Mặt Trận Ea Súp';
+    if (u === 'canbo') return 'Cán bộ Tiếp nhận';
+    if (u === 'admin') return 'CB. Quản Trị Viên';
+    return `CB. ${user.toUpperCase()}`;
+  }
+
   function isAuth() {
     return localStorage.getItem('easup_admin_auth') === 'true' || 
            sessionStorage.getItem('easup_admin_auth') === 'true';
   }
 
+  function getCurrentOfficerName() {
+    return localStorage.getItem('easup_admin_officer_name') || 
+           sessionStorage.getItem('easup_admin_officer_name') || 
+           'CB. Quản Trị Viên';
+  }
+
   function updateAuthUI() {
     const loggedIn = isAuth();
+    const officerName = getCurrentOfficerName();
+
+    if (adminUserDisplayName) adminUserDisplayName.textContent = officerName;
+    if (modalOfficerName) modalOfficerName.textContent = officerName;
+    if (footerUserName) footerUserName.textContent = officerName;
+
+    if (adminUserBadge) adminUserBadge.style.display = loggedIn ? 'inline-flex' : 'none';
     if (btnOpenAdmin) btnOpenAdmin.style.display = loggedIn ? 'inline-flex' : 'none';
-    if (footerBtnAdmin) footerBtnAdmin.style.display = loggedIn ? 'inline-block' : 'none';
     if (btnAdminLogout) btnAdminLogout.style.display = loggedIn ? 'inline-flex' : 'none';
     if (btnLoginTrigger) btnLoginTrigger.style.display = loggedIn ? 'none' : 'inline-flex';
+
+    if (footerBtnAdmin) footerBtnAdmin.style.display = loggedIn ? 'inline-block' : 'none';
     if (footerBtnLogin) footerBtnLogin.style.display = loggedIn ? 'none' : 'inline-block';
   }
 
@@ -1077,25 +1105,27 @@ function initAdminAuth() {
       if (customPwd) validPasswords.push(customPwd);
 
       if (validUsers.includes(user) && validPasswords.includes(pwd)) {
+        const displayName = getOfficerDisplayName(user);
         if (loginRemember && loginRemember.checked) {
           localStorage.setItem('easup_admin_auth', 'true');
+          localStorage.setItem('easup_admin_user', user);
+          localStorage.setItem('easup_admin_officer_name', displayName);
         } else {
           sessionStorage.setItem('easup_admin_auth', 'true');
+          sessionStorage.setItem('easup_admin_user', user);
+          sessionStorage.setItem('easup_admin_officer_name', displayName);
         }
 
         closeLoginModal();
         updateAuthUI();
+        showToast(` Xin chào ${displayName}! Đăng nhập thành công.`, 'success');
 
         // Mở ngay Bảng quản trị sau khi đăng nhập thành công
         const adminModal = document.getElementById('admin-modal');
         if (adminModal) {
           adminModal.classList.add('active');
-          const adminTableBody = document.getElementById('admin-table-body');
-          if (adminTableBody) {
-            // Tự động render bảng
-            const searchInput = document.getElementById('admin-search-text');
-            if (searchInput) searchInput.dispatchEvent(new Event('input'));
-          }
+          const searchInput = document.getElementById('admin-search-text');
+          if (searchInput) searchInput.dispatchEvent(new Event('input'));
         }
       } else {
         if (loginErrorMsg) {
@@ -1106,21 +1136,91 @@ function initAdminAuth() {
     });
   }
 
+  // Xử lý sự kiện đăng xuất mượt mà, không bị treo/đơ
+  function performLogout(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    localStorage.removeItem('easup_admin_auth');
+    sessionStorage.removeItem('easup_admin_auth');
+    localStorage.removeItem('easup_admin_user');
+    sessionStorage.removeItem('easup_admin_user');
+    localStorage.removeItem('easup_admin_officer_name');
+    sessionStorage.removeItem('easup_admin_officer_name');
+
+    // Đóng tất cả modal đang mở
+    const adminModal = document.getElementById('admin-modal');
+    if (adminModal) adminModal.classList.remove('active');
+    const detailModal = document.getElementById('admin-detail-modal');
+    if (detailModal) detailModal.classList.remove('active');
+
+    // Cập nhật giao diện ngay lập tức
+    updateAuthUI();
+
+    // Thông báo nhanh
+    showToast('🚪 Đã đăng xuất khỏi tài khoản Cán bộ.', 'info');
+  }
+
   if (btnAdminLogout) {
-    btnAdminLogout.addEventListener('click', () => {
-      if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản Cán bộ tiếp nhận không?')) {
-        localStorage.removeItem('easup_admin_auth');
-        sessionStorage.removeItem('easup_admin_auth');
-        updateAuthUI();
-        const adminModal = document.getElementById('admin-modal');
-        if (adminModal) adminModal.classList.remove('active');
-        alert('✓ Đã đăng xuất thành công.');
-      }
-    });
+    btnAdminLogout.addEventListener('click', performLogout);
+    btnAdminLogout.addEventListener('touchstart', performLogout, { passive: true });
   }
 
   // Khởi tạo trạng thái giao diện ngay khi tải trang
   updateAuthUI();
 }
+
+// Hàm hiển thị thông báo Toast đẹp mắt, không block giao diện
+function showToast(message, type = 'info') {
+  let toast = document.getElementById('easup-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'easup-toast';
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #FFFFFF;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+      z-index: 99999;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    `;
+    document.body.appendChild(toast);
+  }
+
+  if (type === 'success') {
+    toast.style.background = 'linear-gradient(135deg, #059669, #047857)';
+    toast.style.border = '1px solid #34D399';
+  } else if (type === 'error') {
+    toast.style.background = 'linear-gradient(135deg, #DC2626, #B91C1C)';
+    toast.style.border = '1px solid #F87171';
+  } else {
+    toast.style.background = 'linear-gradient(135deg, #1E293B, #0F172A)';
+    toast.style.border = '1px solid #475569';
+  }
+
+  toast.textContent = message;
+  toast.style.opacity = '1';
+  toast.style.transform = 'translateY(0)';
+
+  if (window._toastTimeout) clearTimeout(window._toastTimeout);
+  window._toastTimeout = setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(20px)';
+  }, 3000);
+}
+
 
 

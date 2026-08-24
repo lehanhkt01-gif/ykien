@@ -59,18 +59,25 @@
         <a href="#tra-cuu" class="nav-link">Tra cứu tiến độ</a>
         <a href="#quy-trinh" class="nav-link">Quy trình xử lý</a>
         <a href="#faq" class="nav-link">Hỏi - Đáp cử tri</a>
-        <!-- Nút mở Bảng quản lý (Ẩn mặc định, chỉ hiện khi đã đăng nhập Admin) -->
-        <button type="button" class="btn-nav-admin" id="btn-open-admin" style="display:none;">
-          📊 Cán bộ Tiếp nhận
-        </button>
+        
         <!-- Nút Đăng nhập Cán bộ (Hiện khi chưa đăng nhập) -->
         <button type="button" class="btn-nav-admin" id="btn-login-trigger" style="background:#1E293B; border:1px solid #475569; display:inline-flex;">
           🔐 Đăng nhập Cán bộ
         </button>
-        <!-- Nút Đăng xuất Quản trị (Hiện khi đã đăng nhập) -->
-        <button type="button" id="btn-admin-logout" style="display:none; background:transparent; border:1px solid #CBD5E1; color:#475569; padding:5px 12px; border-radius:999px; font-size:0.8rem; font-weight:600; cursor:pointer;" title="Đăng xuất khỏi tài khoản cán bộ">
-          🚪 Đăng xuất
-        </button>
+
+        <!-- Nhóm hiển thị Tên Cán Bộ + Nút Mở Bảng + Nút Đăng Xuất (Hiện khi đã đăng nhập) -->
+        <div id="admin-user-badge" style="display:none; align-items:center; gap:6px;">
+          <span id="admin-user-pill" style="background:#FEF3C7; color:#92400E; border:1px solid #FCD34D; font-weight:700; padding:6px 12px; border-radius:999px; font-size:0.83rem; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+            👤 <span id="admin-user-display-name">CB. Quản trị</span>
+          </span>
+          <button type="button" class="btn-nav-admin" id="btn-open-admin" style="display:none;">
+            📊 Cán bộ Tiếp nhận
+          </button>
+          <button type="button" id="btn-admin-logout" style="background:#FEE2E2; border:1px solid #FCA5A5; color:#991B1B; padding:6px 12px; border-radius:999px; font-size:0.82rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;" title="Đăng xuất khỏi quyền cán bộ">
+            🚪 Đăng xuất
+          </button>
+        </div>
+
         <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" class="nav-link btn-nav-ai">
           🤖 Trợ lý AI Cử tri
         </a>
@@ -495,10 +502,15 @@
   <div class="modal-overlay" id="admin-modal">
     <div class="admin-modal-container">
       <div class="admin-header">
-        <h3>
-          <span>📊</span> BẢNG QUẢN LÝ TIẾP NHẬN & XỬ LÝ Ý KIẾN CỬ TRI
-        </h3>
-        <button type="button" id="btn-close-admin" style="background:transparent; color:#FFFFFF; font-size:1.5rem; line-height:1;">✕</button>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <h3 style="margin:0; font-size:1.15rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <span>📊</span> BẢNG QUẢN LÝ TIẾP NHẬN & XỬ LÝ Ý KIẾN CỬ TRI
+          </h3>
+          <span style="background:rgba(255,255,255,0.22); padding:3px 10px; border-radius:999px; font-size:0.8rem; font-weight:600; color:#FEF3C7; border:1px solid rgba(255,255,255,0.35); display:inline-flex; align-items:center; gap:4px;">
+            👤 Cán bộ: <strong id="modal-officer-name">Quản Trị Viên</strong>
+          </span>
+        </div>
+        <button type="button" id="btn-close-admin" style="background:transparent; color:#FFFFFF; font-size:1.5rem; line-height:1; cursor:pointer; border:none;">✕</button>
       </div>
 
       <!-- Toolbar: Filter & Export -->
@@ -690,7 +702,7 @@
   </div>
 
   <!-- Database & App Scripts (Cache-Busting Version) -->
-  <script src="db.js?v=4.2"></script>
-  <script src="app.js?v=4.2"></script>
+  <script src="db.js?v=4.3"></script>
+  <script src="app.js?v=4.3"></script>
 </body>
 </html>
