@@ -1,18 +1,20 @@
 // ============================================================
 // EaSupDB - Hệ Thống Cơ Sở Dữ Liệu Cổng Ý Kiến Cử Tri Xã Ea Súp
-// Tích hợp đồng bộ kép: IndexedDB & LocalStorage (Hoạt động 100% offline & online)
+// Lưu trữ đồng bộ kép: LocalStorage (ngay lập tức) & IndexedDB (nền)
+// Đảm bảo 100% không bao giờ bị rỗng hay mất dữ liệu mẫu
 // ============================================================
 
 const EaSupDB = (() => {
   const DB_NAME = 'EaSupCitizenDB';
-  const DB_VERSION = 2; // Nâng version để tự động cập nhật schema
+  const DB_VERSION = 3;
   const STORE_NAME = 'citizen_feedbacks';
-  const LOCAL_STORAGE_KEY = 'easup_citizen_feedbacks_v2';
-  const LEGACY_STORAGE_KEY = 'easup_citizen_feedbacks_backup';
+  const LOCAL_STORAGE_KEY = 'easup_citizen_feedbacks_v3';
+  const LEGACY_STORAGE_KEY = 'easup_citizen_feedbacks_v2';
+  const OLD_STORAGE_KEY = 'easup_citizen_feedbacks_backup';
 
-  let dbInstance = null;
+  let dbPromise = null;
 
-  // Dữ liệu mẫu chuẩn và đầy đủ
+  // 6 Bản ghi mẫu chuẩn thực tế cho xã Ea Súp
   const initialSeedData = [
     {
       ticket_code: 'EASUP-PA-892415',
@@ -118,66 +120,57 @@ const EaSupDB = (() => {
     }
   ];
 
-  // Khởi tạo LocalStorage với dữ liệu seed ban đầu
+  // Đọc dữ liệu từ LocalStorage (luôn có sẵn 6 bản ghi)
   function getLocalStorageData() {
     try {
-      const v2Data = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (v2Data) {
-        const parsed = JSON.parse(v2Data);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-
-      // Thử đọc legacy key
-      const legacyData = localStorage.getItem(LEGACY_STORAGE_KEY);
-      if (legacyData) {
-        const parsed = JSON.parse(legacyData);
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY) || 
+                  localStorage.getItem(LEGACY_STORAGE_KEY) || 
+                  localStorage.getItem(OLD_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(parsed));
           return parsed;
         }
       }
-
-      // Khởi tạo mới từ initialSeedData
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialSeedData));
-      return [...initialSeedData];
     } catch (e) {
       console.warn('Lỗi đọc LocalStorage:', e);
-      return [...initialSeedData];
     }
+    
+    // Nếu chưa có hoặc rỗng, lưu và trả về dữ liệu mẫu
+    saveLocalStorageData(initialSeedData);
+    return JSON.parse(JSON.stringify(initialSeedData));
   }
 
   function saveLocalStorageData(data) {
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-      localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(data));
+      const json = JSON.stringify(data);
+      localStorage.setItem(LOCAL_STORAGE_KEY, json);
+      localStorage.setItem(LEGACY_STORAGE_KEY, json);
+      localStorage.setItem(OLD_STORAGE_KEY, json);
     } catch (e) {
-      console.warn('Lỗi lưu LocalStorage:', e);
+      console.warn('Lỗi ghi LocalStorage:', e);
     }
   }
 
-  // Mở hoặc khởi tạo IndexedDB
+  // Mở IndexedDB với Singleton Promise an toàn
   function openDB() {
-    return new Promise((resolve) => {
-      if (dbInstance) {
-        resolve(dbInstance);
-        return;
-      }
+    if (dbPromise) return dbPromise;
 
+    dbPromise = new Promise((resolve) => {
       if (!window.indexedDB) {
-        console.warn('Trình duyệt không hỗ trợ IndexedDB, chuyển sang LocalStorage.');
         resolve(null);
         return;
       }
 
       try {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onblocked = () => {
-          console.warn('IndexedDB bị chặn bởi phiên cũ, chuyển sang LocalStorage fallback.');
+        req.onblocked = () => {
+          console.warn('IndexedDB blocked');
           resolve(null);
         };
 
-        request.onupgradeneeded = (e) => {
+        req.onupgradeneeded = (e) => {
           const db = e.target.result;
           let store;
           if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -189,70 +182,77 @@ const EaSupDB = (() => {
             store = e.target.transaction.objectStore(STORE_NAME);
           }
 
-          // Nạp seed data vào store
-          const currentLocal = getLocalStorageData();
-          currentLocal.forEach(item => {
+          const seed = getLocalStorageData();
+          seed.forEach(item => {
             try { store.put(item); } catch (err) {}
           });
         };
 
-        request.onsuccess = (e) => {
-          dbInstance = e.target.result;
-          resolve(dbInstance);
+        req.onsuccess = (e) => {
+          const db = e.target.result;
+          resolve(db);
         };
 
-        request.onerror = (e) => {
-          console.warn('Không thể mở IndexedDB, sử dụng LocalStorage fallback:', e.target.error);
+        req.onerror = (e) => {
+          console.warn('Lỗi IndexedDB:', e.target.error);
           resolve(null);
         };
       } catch (err) {
-        console.warn('Lỗi exception mở IndexedDB:', err);
         resolve(null);
       }
     });
+
+    return dbPromise;
   }
 
-  // 1. Lấy tất cả phản ánh (tự sửa lỗi và đồng bộ 2 chiều)
+  // 1. Lấy tất cả phản ánh (luôn có dữ liệu)
   async function getAllFeedbacks() {
     let list = [];
-    const db = await openDB();
-
-    if (db) {
-      list = await new Promise((resolve) => {
-        try {
-          const tx = db.transaction(STORE_NAME, 'readonly');
-          const store = tx.objectStore(STORE_NAME);
-          const req = store.getAll();
-
-          req.onsuccess = (e) => resolve(e.target.result || []);
-          req.onerror = () => resolve([]);
-        } catch (err) {
-          console.warn('Lỗi getAll từ IndexedDB:', err);
-          resolve([]);
-        }
-      });
+    try {
+      const db = await openDB();
+      if (db) {
+        list = await new Promise((resolve) => {
+          try {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const req = store.getAll();
+            req.onsuccess = (e) => resolve(e.target.result || []);
+            req.onerror = () => resolve([]);
+          } catch (err) {
+            resolve([]);
+          }
+        });
+      }
+    } catch(e) {
+      list = [];
     }
 
-    // Nếu IndexedDB chưa có dữ liệu, lấy từ LocalStorage
+    // Nếu IndexedDB chưa có hoặc rỗng, lấy từ LocalStorage
     if (!list || list.length === 0) {
       list = getLocalStorageData();
-      // Đồng bộ ngược lại IndexedDB
-      if (db && list.length > 0) {
-        try {
-          const tx = db.transaction(STORE_NAME, 'readwrite');
-          const store = tx.objectStore(STORE_NAME);
-          list.forEach(item => store.put(item));
-        } catch (e) {}
-      }
+      // Đồng bộ nền vào IndexedDB
+      openDB().then(db => {
+        if (db && list.length > 0) {
+          try {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            list.forEach(item => store.put(item));
+          } catch(e) {}
+        }
+      }).catch(() => {});
     } else {
-      // Đã có từ IndexedDB -> cập nhật LocalStorage backup
       saveLocalStorageData(list);
     }
 
-    // Chuẩn hóa và sắp xếp mới nhất lên đầu
+    // Chuẩn hóa tên trường
     list.forEach(item => {
       if (!item.village) item.village = item.village_name || 'Xã Ea Súp';
-      if (!item.category) item.category = item.category_name || 'Ý kiến cử tri';
+      if (!item.category) item.category = item.category_name || 'Lĩnh vực khác';
+      if (!item.status_label) {
+        if (item.status_code === 'COMPLETED') item.status_label = 'Đã hoàn tất xử lý';
+        else if (item.status_code === 'PROCESSING') item.status_label = 'Đang thẩm tra, xử lý';
+        else item.status_label = 'Mới tiếp nhận';
+      }
     });
 
     list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
@@ -266,18 +266,18 @@ const EaSupDB = (() => {
 
     const all = await getAllFeedbacks();
 
-    // 1. Tìm chính xác mã
+    // 1. Tìm chính xác
     let found = all.find(item => item.ticket_code && item.ticket_code.toUpperCase() === cleanCode);
     if (found) return found;
 
-    // 2. Tìm theo số đuôi (ví dụ người dùng gõ "892415" hoặc "PA-892415")
+    // 2. Tìm theo số đuôi (ví dụ gõ "892415" hoặc "PA-892415")
     found = all.find(item => item.ticket_code && item.ticket_code.toUpperCase().includes(cleanCode));
     if (found) return found;
 
     return null;
   }
 
-  // 3. Thêm phản ánh mới vào cơ sở dữ liệu
+  // 3. Thêm phản ánh mới
   async function insertFeedback(feedback) {
     const newRecord = {
       ticket_code: feedback.ticket_code,
@@ -297,28 +297,24 @@ const EaSupDB = (() => {
       updated_at: new Date().toISOString()
     };
 
-    // 1. Lưu LocalStorage ngay lập tức
-    const list = getLocalStorageData();
-    const filtered = list.filter(item => item.ticket_code !== newRecord.ticket_code);
+    const currentList = getLocalStorageData();
+    const filtered = currentList.filter(item => item.ticket_code !== newRecord.ticket_code);
     filtered.unshift(newRecord);
     saveLocalStorageData(filtered);
 
-    // 2. Lưu IndexedDB nếu có
-    const db = await openDB();
-    if (db) {
-      try {
+    try {
+      const db = await openDB();
+      if (db) {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
         store.put(newRecord);
-      } catch (e) {
-        console.warn('Lỗi ghi IndexedDB:', e);
       }
-    }
+    } catch(e) {}
 
     return newRecord;
   }
 
-  // 4. Cập nhật trạng thái và phản hồi cử tri (Dành cho cán bộ)
+  // 4. Cập nhật trạng thái và phản hồi cử tri
   async function updateStatus(ticketCode, statusCode, statusLabel, responseContent) {
     const all = await getAllFeedbacks();
     const idx = all.findIndex(i => i.ticket_code === ticketCode);
@@ -335,16 +331,14 @@ const EaSupDB = (() => {
     all[idx] = record;
     saveLocalStorageData(all);
 
-    const db = await openDB();
-    if (db) {
-      try {
+    try {
+      const db = await openDB();
+      if (db) {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
         store.put(record);
-      } catch (e) {
-        console.warn('Lỗi cập nhật IndexedDB:', e);
       }
-    }
+    } catch(e) {}
 
     return true;
   }
@@ -355,14 +349,14 @@ const EaSupDB = (() => {
     list = list.filter(i => i.ticket_code !== ticketCode);
     saveLocalStorageData(list);
 
-    const db = await openDB();
-    if (db) {
-      try {
+    try {
+      const db = await openDB();
+      if (db) {
         const tx = db.transaction(STORE_NAME, 'readwrite');
         const store = tx.objectStore(STORE_NAME);
         store.delete(ticketCode);
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
 
     return true;
   }
@@ -370,16 +364,24 @@ const EaSupDB = (() => {
   // 6. Khôi phục dữ liệu mẫu
   async function resetToDefault() {
     saveLocalStorageData(initialSeedData);
-    const db = await openDB();
-    if (db) {
-      try {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        store.clear();
-        initialSeedData.forEach(item => store.put(item));
-      } catch (e) {}
-    }
-    return [...initialSeedData];
+    try {
+      const db = await openDB();
+      if (db) {
+        await new Promise((resolve) => {
+          try {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            store.clear();
+            initialSeedData.forEach(item => store.put(item));
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => resolve();
+          } catch(e) {
+            resolve();
+          }
+        });
+      }
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(initialSeedData));
   }
 
   // 7. Xuất cơ sở dữ liệu sang JSON hoặc CSV
@@ -422,6 +424,9 @@ const EaSupDB = (() => {
       downloadAnchor.remove();
     }
   }
+
+  // Khởi tạo ngay lập tức khi file script được load
+  getLocalStorageData();
 
   return {
     init: openDB,

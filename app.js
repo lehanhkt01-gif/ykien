@@ -686,8 +686,12 @@ function initAdminDashboard() {
         alert('Vui lòng dán URL Google Apps Script Web App.');
         return;
       }
+      if (url.includes('/edit')) {
+        alert('⚠️ CẢNH BÁO: Đường link bạn vừa nhập có chứa "/edit" (Đây là trang chỉnh sửa mã nguồn, KHÔNG PHẢI URL Web App).\n\n👉 Cách lấy URL Web App đúng:\n1. Mở trang Google Apps Script.\n2. Bấm nút "Triển khai" (Deploy) màu xanh ở góc phải trên > Chọn "Tùy chọn triển khai mới" (New deployment).\n3. Chọn loại: "Ứng dụng web" (Web App).\n4. Quyền truy cập (Who has access): Chọn "Bất kỳ ai" (Anyone).\n5. Bấm "Triển khai" và sao chép đường link kết thúc bằng "/exec".');
+        return;
+      }
       if (!url.startsWith('https://script.google.com/macros/s/') || !url.endsWith('/exec')) {
-        if (!confirm('⚠️ Cảnh báo: URL Web App thường có dạng https://script.google.com/macros/s/.../exec\n\nBạn có chắc chắn muốn lưu URL này không?')) {
+        if (!confirm('⚠️ Cảnh báo: URL Web App hợp lệ thường bắt đầu bằng https://script.google.com/macros/s/ và kết thúc bằng /exec\n\nBạn có muốn tiếp tục lưu URL này không?')) {
           return;
         }
       }
@@ -701,21 +705,28 @@ function initAdminDashboard() {
     btnTestGsheet.addEventListener('click', async () => {
       const url = inputGsheetUrl.value.trim() || localStorage.getItem('easup_google_sheets_url');
       if (!url) {
-        alert('⚠️ Vui lòng dán URL Web App vào ô bên cạnh và bấm "Lưu Kết Nối" trước khi gửi thử.');
+        alert('⚠️ Vui lòng dán URL Web App vào ô bên cạnh trước khi bấm gửi thử.');
         return;
       }
+
+      if (url.includes('/edit')) {
+        alert('⚠️ CẢNH BÁO: Link bạn dán là link chỉnh sửa Code Apps Script (có chữ /edit).\n\n👉 Vui lòng nhấn nút "Triển khai" (Deploy) > "Tùy chọn triển khai mới" > "Ứng dụng web" (Web App) > Chọn quyền "Bất kỳ ai" (Anyone) > Copy link kết thúc bằng /exec.');
+        return;
+      }
+
+      localStorage.setItem('easup_google_sheets_url', url);
 
       btnTestGsheet.disabled = true;
       btnTestGsheet.textContent = '⏳ Đang gửi...';
 
       const testRecord = {
         ticket_code: 'TEST-PA-' + Math.floor(100000 + Math.random() * 900000),
-        sender_name: 'Cán bộ thử nghiệm MTTQ',
+        sender_name: 'Cán bộ kiểm tra MTTQ',
         sender_phone: '0912345678',
         village: 'Buôn A',
         category: 'Kiểm tra kết nối hệ thống',
         title: 'Thử nghiệm lưu Google Sheets & Google Drive',
-        content: 'Đây là dữ liệu thử nghiệm tải tệp đính kèm tự động lưu vào Google Drive của lehanhkt01@gmail.com.',
+        content: 'Đây là dòng thử nghiệm kiểm tra tính năng tự động lưu thông tin và tệp đính kèm vào tài khoản lehanhkt01@gmail.com.',
         attachments: [
           {
             name: 'thong_tin_thu_nghiem.txt',
@@ -729,8 +740,8 @@ function initAdminDashboard() {
       };
 
       try {
-        await sendToGoogleSheets(testRecord);
-        alert(`✓ ĐÃ GỬI XONG DÒNG & TỆP THỬ NGHIỆM!\n\nMã hồ sơ: ${testRecord.ticket_code}\n\n👉 Bạn hãy mở:\n1. Bảng tính Google Sheets trên tài khoản lehanhkt01@gmail.com\n2. Thư mục "HỒ SƠ PHẢN ÁNH CỬ TRI - XÃ EA SÚP" trên Google Drive\nđể kiểm tra dòng và tệp tin mới vừa được lưu nhé!`);
+        await sendToGoogleSheets(testRecord, url);
+        alert(`✓ ĐÃ PHÁT LỆNH GỬI THÀNH CÔNG SANG GOOGLE APPS SCRIPT!\n\nMã hồ sơ: ${testRecord.ticket_code}\n\n👉 Bạn hãy mở:\n1. Bảng tính Google Sheets trên tài khoản lehanhkt01@gmail.com\n2. Thư mục "HỒ SƠ PHẢN ÁNH CỬ TRI - XÃ EA SÚP" trên Google Drive\nđể kiểm tra kết quả nhé!`);
       } catch (err) {
         alert(`Lỗi khi gửi: ${err.message}`);
       } finally {
@@ -744,8 +755,8 @@ function initAdminDashboard() {
 // ============================================================
 // HÀM TỰ ĐỘNG GỬI DỮ LIỆU SANG GOOGLE SHEETS & GOOGLE DRIVE
 // ============================================================
-async function sendToGoogleSheets(feedbackRecord) {
-  const gsheetUrl = localStorage.getItem('easup_google_sheets_url');
+async function sendToGoogleSheets(feedbackRecord, overrideUrl = null) {
+  const gsheetUrl = overrideUrl || localStorage.getItem('easup_google_sheets_url');
   
   if (!gsheetUrl) {
     console.log('Chưa thiết lập URL Google Apps Script. Dữ liệu đã lưu an toàn trong CSDL nội bộ.');
@@ -755,35 +766,46 @@ async function sendToGoogleSheets(feedbackRecord) {
   try {
     const payload = {
       ticket_code: feedbackRecord.ticket_code,
-      sender_name: feedbackRecord.sender_name,
-      sender_phone: feedbackRecord.sender_phone,
-      village: feedbackRecord.village,
-      category: feedbackRecord.category,
-      title: feedbackRecord.title,
-      content: feedbackRecord.content,
-      // Gửi đầy đủ Base64 data để Google Apps Script tạo file trên Google Drive
+      sender_name: feedbackRecord.sender_name || 'Cử tri ẩn danh',
+      sender_phone: feedbackRecord.sender_phone || '',
+      village: feedbackRecord.village || feedbackRecord.village_name || '',
+      category: feedbackRecord.category || feedbackRecord.category_name || '',
+      title: feedbackRecord.title || '',
+      content: feedbackRecord.content || '',
       attachments: (feedbackRecord.attachments || []).map(a => ({
         name: a.name || 'Tệp_dinh_kem',
         type: a.type || 'application/octet-stream',
         size: a.size || 0,
         data: a.data || ''
       })),
-      status_label: feedbackRecord.status_label,
-      response_content: feedbackRecord.response_content
+      status_label: feedbackRecord.status_label || 'Mới tiếp nhận',
+      response_content: feedbackRecord.response_content || ''
     };
 
-    // Dùng text/plain để tránh CORS preflight block của trình duyệt
-    await fetch(gsheetUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      cache: 'no-cache',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify(payload)
-    });
+    // Tạo timeout 8 giây qua AbortController để không bị treo nút gửi
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-    console.log('✓ Đã kích hoạt lệnh gửi dữ liệu & tệp tin sang Google Drive / Sheets (lehanhkt01@gmail.com)');
+    try {
+      await fetch(gsheetUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+    } catch (fetchErr) {
+      if (fetchErr.name !== 'AbortError') {
+        console.warn('Lỗi fetch gửi Sheets:', fetchErr);
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    console.log('✓ Đã phát lệnh gửi dữ liệu sang Google Drive / Sheets (lehanhkt01@gmail.com)');
   } catch (err) {
     console.warn('Lỗi kết nối Google Sheets/Drive:', err);
   }
