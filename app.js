@@ -1101,30 +1101,44 @@ function initAdminDashboard() {
       });
     }
 
-    if (btnPushSheetsToPg) {
-      btnPushSheetsToPg.addEventListener('click', async () => {
-        const u = cleanSupabaseUrl(urlInput ? urlInput.value : '');
-        const k = keyInput ? keyInput.value.trim() : '';
-        if (u && k) EaSupDB.setPostgresConfig(u, k);
+    window.triggerSyncSheetsToPostgres = async function(btnElement) {
+      const btn = btnElement || document.getElementById('btn-sync-sheets-to-postgres');
+      const u = cleanSupabaseUrl(urlInput ? urlInput.value : '');
+      const k = keyInput ? keyInput.value.trim() : '';
+      if (u && k && window.EaSupDB) EaSupDB.setPostgresConfig(u, k);
 
-        btnPushSheetsToPg.disabled = true;
-        btnPushSheetsToPg.innerHTML = '<span>⏳ Đang tải từ Google Sheets & đẩy lên Supabase...</span>';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳ Đang tải từ Google Sheets & đẩy lên Supabase...</span>';
+      }
 
-        try {
-          const res = await EaSupDB.syncSheetsToPostgres();
-          if (res && res.success) {
-            showToast(`🎉 Đã đồng bộ thành công ${res.count} hồ sơ từ Google Sheets lên PostgreSQL Supabase!`, 'success');
-            if (typeof renderAdminTable === 'function') renderAdminTable();
-            if (modal) modal.classList.remove('active');
-          } else {
-            alert('Lỗi đồng bộ: ' + (res ? res.message : 'Vui lòng kiểm tra lại kết nối'));
-          }
-        } catch(e) {
-          alert('Lỗi: ' + e.message);
-        } finally {
-          btnPushSheetsToPg.disabled = false;
-          btnPushSheetsToPg.innerHTML = '<span>⬆️</span> <span>Đồng bộ từ Google Sheets ➔ Lên PostgreSQL Supabase</span>';
+      try {
+        if (!window.EaSupDB || !EaSupDB.syncSheetsToPostgres) {
+          alert('Hệ thống cơ sở dữ liệu chưa sẵn sàng. Vui lòng tải lại trang.');
+          return;
         }
+        const res = await EaSupDB.syncSheetsToPostgres();
+        if (res && res.success) {
+          alert(`🎉 ĐÃ ĐỒNG BỘ THÀNH CÔNG ${res.count} HỒ SƠ TỪ GOOGLE SHEETS LÊN SUPABASE POSTGRESQL!`);
+          if (typeof renderAdminTable === 'function') renderAdminTable();
+          if (modal) modal.classList.remove('active');
+        } else {
+          alert('Lỗi đồng bộ: ' + (res ? res.message : 'Vui lòng kiểm tra lại kết nối'));
+        }
+      } catch(e) {
+        alert('Lỗi: ' + e.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>⬆️</span> <span>Đồng bộ từ Google Sheets ➔ Lên PostgreSQL Supabase</span>';
+        }
+      }
+    };
+
+    if (btnPushSheetsToPg) {
+      btnPushSheetsToPg.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.triggerSyncSheetsToPostgres(btnPushSheetsToPg);
       });
     }
 

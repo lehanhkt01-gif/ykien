@@ -633,14 +633,14 @@ const EaSupDB = (() => {
 
   async function pushAllToPostgres(customRecords = null) {
     const cfg = getPostgresConfig();
-    if (!cfg.url || !cfg.key) return { success: false, message: 'Chưa cấu hình PostgreSQL' };
+    if (!cfg.url || !cfg.key) return { success: false, message: 'Chưa cấu hình PostgreSQL (Vui lòng nhập URL và Anon Key)' };
 
     let records = customRecords;
     if (!records || !records.length) {
       records = getLocalStorageData();
     }
     if (!records || !records.length) {
-      return { success: false, message: 'Không có dữ liệu để đẩy lên PostgreSQL' };
+      return { success: false, message: 'Không tìm thấy hồ sơ nào để đồng bộ' };
     }
 
     try {
@@ -657,17 +657,23 @@ const EaSupDB = (() => {
         let createdAt = new Date().toISOString();
         if (record.created_at) {
           try {
-            // Hỗ trợ cả định dạng ngày DD/MM/YYYY HH:mm:ss của Google Sheets
-            if (typeof record.created_at === 'string' && record.created_at.includes('/')) {
-              const parts = record.created_at.split(' ');
-              const dParts = parts[0].split('/');
-              if (dParts.length === 3) {
-                const dateObj = new Date(`${dParts[2]}-${dParts[1]}-${dParts[0]}T${parts[1] || '00:00:00'}Z`);
-                if (!isNaN(dateObj.getTime())) createdAt = dateObj.toISOString();
+            if (typeof record.created_at === 'string') {
+              let cleanStr = record.created_at.trim().replace(/\./g, ':');
+              if (cleanStr.includes('/')) {
+                const parts = cleanStr.split(' ');
+                const dParts = parts[0].split('/');
+                if (dParts.length === 3) {
+                  const day = dParts[0].padStart(2, '0');
+                  const month = dParts[1].padStart(2, '0');
+                  const year = dParts[2].length === 4 ? dParts[2] : '20' + dParts[2];
+                  const time = parts[1] || '00:00:00';
+                  const parsed = new Date(`${year}-${month}-${day}T${time}`);
+                  if (!isNaN(parsed.getTime())) createdAt = parsed.toISOString();
+                }
+              } else {
+                const parsed = new Date(cleanStr);
+                if (!isNaN(parsed.getTime())) createdAt = parsed.toISOString();
               }
-            } else {
-              const d = new Date(record.created_at);
-              if (!isNaN(d.getTime())) createdAt = d.toISOString();
             }
           } catch(e) {}
         }
@@ -690,6 +696,7 @@ const EaSupDB = (() => {
         };
       });
 
+      // Thử ghi đồng loạt bằng REST API
       const response = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks?on_conflict=ticket_code`, {
         method: 'POST',
         headers: {
@@ -706,8 +713,27 @@ const EaSupDB = (() => {
         console.log(`✓ Đã đồng bộ thành công ${payload.length} hồ sơ lên PostgreSQL Supabase!`);
         return { success: true, count: payload.length, data: resData };
       } else {
+        // Fallback ghi từng dòng nếu ghi nhóm bị lỗi
+        let successCount = 0;
+        for (const item of payload) {
+          try {
+            const singleRes = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks?on_conflict=ticket_code`, {
+              method: 'POST',
+              headers: {
+                'apikey': cfg.key,
+                'Authorization': `Bearer ${cfg.key}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates,return=minimal'
+              },
+              body: JSON.stringify(item)
+            });
+            if (singleRes.ok) successCount++;
+          } catch(e) {}
+        }
+        if (successCount > 0) {
+          return { success: true, count: successCount };
+        }
         const errText = await response.text();
-        console.warn('Lỗi ghi bulk PostgreSQL:', errText);
         return { success: false, message: errText };
       }
     } catch (err) {
