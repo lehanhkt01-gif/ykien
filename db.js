@@ -631,6 +631,107 @@ const EaSupDB = (() => {
     }
   }
 
+  async function pushAllToPostgres(customRecords = null) {
+    const cfg = getPostgresConfig();
+    if (!cfg.url || !cfg.key) return { success: false, message: 'Chưa cấu hình PostgreSQL' };
+
+    let records = customRecords;
+    if (!records || !records.length) {
+      records = getLocalStorageData();
+    }
+    if (!records || !records.length) {
+      return { success: false, message: 'Không có dữ liệu để đẩy lên PostgreSQL' };
+    }
+
+    try {
+      const payload = records.map(record => {
+        let atts = record.attachments || [];
+        if (!Array.isArray(atts) || atts.length === 0) {
+          if (record.drive_links && typeof record.drive_links === 'string') {
+            atts = [{ name: 'Google Drive', url: record.drive_links }];
+          } else {
+            atts = [];
+          }
+        }
+
+        let createdAt = new Date().toISOString();
+        if (record.created_at) {
+          try {
+            // Hỗ trợ cả định dạng ngày DD/MM/YYYY HH:mm:ss của Google Sheets
+            if (typeof record.created_at === 'string' && record.created_at.includes('/')) {
+              const parts = record.created_at.split(' ');
+              const dParts = parts[0].split('/');
+              if (dParts.length === 3) {
+                const dateObj = new Date(`${dParts[2]}-${dParts[1]}-${dParts[0]}T${parts[1] || '00:00:00'}Z`);
+                if (!isNaN(dateObj.getTime())) createdAt = dateObj.toISOString();
+              }
+            } else {
+              const d = new Date(record.created_at);
+              if (!isNaN(d.getTime())) createdAt = d.toISOString();
+            }
+          } catch(e) {}
+        }
+
+        return {
+          ticket_code: record.ticket_code,
+          sender_name: record.sender_name || 'Cử tri ẩn danh',
+          sender_phone: record.sender_phone || '',
+          village: record.village || record.village_name || 'Xã Ea Súp',
+          village_name: record.village || record.village_name || 'Xã Ea Súp',
+          category: record.category || record.category_name || 'Lĩnh vực khác',
+          category_name: record.category || record.category_name || 'Lĩnh vực khác',
+          title: record.title || '(Không có tiêu đề)',
+          content: record.content || '',
+          attachments: atts,
+          status_code: record.status_code || 'RECEIVED',
+          status_label: record.status_label || 'Mới tiếp nhận',
+          response_content: record.response_content || '',
+          created_at: createdAt
+        };
+      });
+
+      const response = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks?on_conflict=ticket_code`, {
+        method: 'POST',
+        headers: {
+          'apikey': cfg.key,
+          'Authorization': `Bearer ${cfg.key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        const resData = await response.json();
+        console.log(`✓ Đã đồng bộ thành công ${payload.length} hồ sơ lên PostgreSQL Supabase!`);
+        return { success: true, count: payload.length, data: resData };
+      } else {
+        const errText = await response.text();
+        console.warn('Lỗi ghi bulk PostgreSQL:', errText);
+        return { success: false, message: errText };
+      }
+    } catch (err) {
+      console.warn('Lỗi kết nối pushAllToPostgres:', err);
+      return { success: false, message: err.message };
+    }
+  }
+
+  async function syncSheetsToPostgres() {
+    // 1. Tải toàn bộ dữ liệu mới nhất từ Google Sheets & Google Drive
+    const sheetRes = await syncFromGoogleSheets();
+    if (!sheetRes.success) {
+      return { success: false, message: 'Lỗi tải từ Google Sheets: ' + (sheetRes.message || 'Không kết nối được') };
+    }
+
+    // 2. Đẩy toàn bộ dữ liệu này lên PostgreSQL Supabase
+    const pgRes = await pushAllToPostgres(sheetRes.data);
+    if (!pgRes.success) {
+      return { success: false, message: 'Lỗi ghi vào PostgreSQL: ' + (pgRes.message || 'Không thể lưu') };
+    }
+
+    return { success: true, count: sheetRes.data.length, data: sheetRes.data };
+  }
+
   async function syncFromPostgres() {
     const cfg = getPostgresConfig();
     if (!cfg.url || !cfg.key) return { success: false, message: 'Chưa cấu hình PostgreSQL' };
@@ -751,6 +852,8 @@ const EaSupDB = (() => {
     isPostgresConfigured: isPostgresConfigured,
     testPostgresConnection: testPostgresConnection,
     saveToPostgres: saveToPostgres,
+    pushAllToPostgres: pushAllToPostgres,
+    syncSheetsToPostgres: syncSheetsToPostgres,
     syncFromPostgres: syncFromPostgres,
     updateStatusInPostgres: updateStatusInPostgres,
     lookupFromPostgres: lookupFromPostgres,

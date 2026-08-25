@@ -992,6 +992,7 @@ function initAdminDashboard() {
     const btnTest = document.getElementById('btn-test-postgres');
     const btnSave = document.getElementById('btn-save-postgres');
     const btnSync = document.getElementById('btn-sync-postgres');
+    const btnPushSheetsToPg = document.getElementById('btn-sync-sheets-to-postgres');
     const urlInput = document.getElementById('postgres-url-input');
     const keyInput = document.getElementById('postgres-key-input');
     const statusBox = document.getElementById('postgres-conn-status');
@@ -1100,13 +1101,40 @@ function initAdminDashboard() {
       });
     }
 
+    if (btnPushSheetsToPg) {
+      btnPushSheetsToPg.addEventListener('click', async () => {
+        const u = cleanSupabaseUrl(urlInput ? urlInput.value : '');
+        const k = keyInput ? keyInput.value.trim() : '';
+        if (u && k) EaSupDB.setPostgresConfig(u, k);
+
+        btnPushSheetsToPg.disabled = true;
+        btnPushSheetsToPg.innerHTML = '<span>⏳ Đang tải từ Google Sheets & đẩy lên Supabase...</span>';
+
+        try {
+          const res = await EaSupDB.syncSheetsToPostgres();
+          if (res && res.success) {
+            showToast(`🎉 Đã đồng bộ thành công ${res.count} hồ sơ từ Google Sheets lên PostgreSQL Supabase!`, 'success');
+            if (typeof renderAdminTable === 'function') renderAdminTable();
+            if (modal) modal.classList.remove('active');
+          } else {
+            alert('Lỗi đồng bộ: ' + (res ? res.message : 'Vui lòng kiểm tra lại kết nối'));
+          }
+        } catch(e) {
+          alert('Lỗi: ' + e.message);
+        } finally {
+          btnPushSheetsToPg.disabled = false;
+          btnPushSheetsToPg.innerHTML = '<span>⬆️</span> <span>Đồng bộ từ Google Sheets ➔ Lên PostgreSQL Supabase</span>';
+        }
+      });
+    }
+
     if (btnSync) {
       btnSync.addEventListener('click', async () => {
         btnSync.disabled = true;
         btnSync.textContent = '⏳ Đang đồng bộ từ PostgreSQL...';
         const res = await EaSupDB.syncFromPostgres();
         btnSync.disabled = false;
-        btnSync.textContent = '🔄 Đồng Bộ Toàn Bộ Dữ Liệu Từ PostgreSQL';
+        btnSync.textContent = '🔄 Tải toàn bộ dữ liệu từ PostgreSQL Supabase về bảng';
 
         if (res && res.success) {
           showToast(`✓ Đã đồng bộ thành công ${res.count} hồ sơ từ PostgreSQL!`, 'success');

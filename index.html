@@ -637,7 +637,7 @@
           <input type="password" id="postgres-key-input" placeholder="Nhập Supabase anon public key..." style="width: 100%; padding: 10px 12px; border: 1.5px solid #CBD5E1; border-radius: 6px; font-size: 0.9rem; outline: none; box-sizing: border-box;">
         </div>
 
-        <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+        <div style="display: flex; gap: 10px; margin-bottom: 12px;">
           <button type="button" id="btn-test-postgres" style="flex: 1; background: #0284C7; color: #FFFFFF; border: none; padding: 10px; border-radius: 6px; font-weight: 600; font-size: 0.88rem; cursor: pointer;">
             ⚡ Kiểm Tra Kết Nối
           </button>
@@ -646,9 +646,12 @@
           </button>
         </div>
 
-        <div style="margin-bottom: 18px;">
-          <button type="button" id="btn-sync-postgres" style="width: 100%; background: #059669; color: #FFFFFF; border: none; padding: 10px; border-radius: 6px; font-weight: 700; font-size: 0.88rem; cursor: pointer;">
-            🔄 Đồng Bộ Toàn Bộ Dữ Liệu Từ PostgreSQL
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px;">
+          <button type="button" id="btn-sync-sheets-to-postgres" style="width: 100%; background: linear-gradient(135deg, #F59E0B, #D97706); color: #FFFFFF; border: none; padding: 10px 14px; border-radius: 6px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span>⬆️</span> <span>Đồng bộ từ Google Sheets ➔ Lên PostgreSQL Supabase</span>
+          </button>
+          <button type="button" id="btn-sync-postgres" style="width: 100%; background: #059669; color: #FFFFFF; border: none; padding: 10px 14px; border-radius: 6px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span>📥</span> <span>Tải toàn bộ dữ liệu từ PostgreSQL Supabase về bảng</span>
           </button>
         </div>
 
