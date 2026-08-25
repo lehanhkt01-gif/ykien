@@ -1162,6 +1162,9 @@ function initAdminDashboard() {
 
     refreshStatus();
   }
+
+  // KHỞI TẠO MODAL POSTGRESQL NGAY LẬP TỨC
+  initPostgresModal();
 }
 
 // ============================================================
