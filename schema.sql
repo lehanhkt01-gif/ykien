@@ -93,22 +93,26 @@ CREATE TABLE IF NOT EXISTS admin_users (
 ALTER TABLE citizen_feedbacks ENABLE ROW LEVEL SECURITY;
 
 -- 1. Cho phép mọi người (Anonymous / Public) gửi phản ánh mới (INSERT)
+DROP POLICY IF EXISTS "Allow public insert feedbacks" ON citizen_feedbacks;
 CREATE POLICY "Allow public insert feedbacks" 
 ON citizen_feedbacks FOR INSERT 
 WITH CHECK (true);
 
 -- 2. Cho phép mọi người (Public) đọc/tra cứu hồ sơ (SELECT)
+DROP POLICY IF EXISTS "Allow public read feedbacks" ON citizen_feedbacks;
 CREATE POLICY "Allow public read feedbacks" 
 ON citizen_feedbacks FOR SELECT 
 USING (true);
 
 -- 3. Cho phép cập nhật trạng thái & nội dung trả lời (UPDATE)
+DROP POLICY IF EXISTS "Allow update feedbacks" ON citizen_feedbacks;
 CREATE POLICY "Allow update feedbacks" 
 ON citizen_feedbacks FOR UPDATE 
 USING (true)
 WITH CHECK (true);
 
 -- 4. Cho phép xóa hồ sơ
+DROP POLICY IF EXISTS "Allow delete feedbacks" ON citizen_feedbacks;
 CREATE POLICY "Allow delete feedbacks" 
 ON citizen_feedbacks FOR DELETE 
 USING (true);
