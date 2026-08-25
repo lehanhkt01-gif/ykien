@@ -318,12 +318,32 @@ function handleIncomingData(e) {
     rowRange.setFontSize(10);
     sheet.setRowHeight(lastRowIndex, 28);
 
+    // TỰ ĐỘNG ĐỒNG BỘ ĐỒNG THỜI SANG SUPABASE POSTGRESQL CLOUD
+    try {
+      sendToSupabaseDatabase({
+        ticket_code: ticketCode,
+        sender_name: senderName,
+        sender_phone: senderPhone,
+        village: village,
+        village_name: village,
+        category: category,
+        category_name: category,
+        title: title,
+        content: content,
+        drive_links: driveLinksText,
+        status_label: statusLabel,
+        response_content: responseContent
+      });
+    } catch (supErr) {
+      Logger.log("Lỗi đồng bộ Supabase từ GAS: " + supErr.toString());
+    }
+
     return ContentService
       .createTextOutput(JSON.stringify({ 
         "status": "success", 
         "ticket_code": ticketCode, 
         "drive_files_saved": driveFileLinks.length,
-        "message": "Đã lưu thông tin và tệp đính kèm vào Google Drive & Google Sheets thành công!" 
+        "message": "Đã lưu thông tin và tệp đính kèm vào Google Drive & Google Sheets & Supabase thành công!" 
       }))
       .setMimeType(ContentService.MimeType.JSON);
 
@@ -337,4 +357,40 @@ function handleIncomingData(e) {
       lock.releaseLock();
     } catch (e) {}
   }
+}
+
+// CẤU HÌNH SUPABASE POSTGRESQL TỰ ĐỘNG SERVER-SIDE
+const SUPABASE_REST_URL = "https://qgbjiwrjhmfuaqnngrcf.supabase.co/rest/v1/citizen_feedbacks?on_conflict=ticket_code";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnYmppd3JqaG1mdWFxbm5ncmNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NDIzMzksImV4cCI6MjEwMzExODMzOX0.JJON9OFpawvOWE6kG22iNhmrIQc7rSxrGHih2Hc5zMM";
+
+function sendToSupabaseDatabase(record) {
+  const payload = {
+    ticket_code: record.ticket_code,
+    sender_name: record.sender_name || "Cử tri ẩn danh",
+    sender_phone: record.sender_phone || "",
+    village: record.village || "Xã Ea Súp",
+    village_name: record.village_name || record.village || "Xã Ea Súp",
+    category: record.category || "Lĩnh vực khác",
+    category_name: record.category_name || record.category || "Lĩnh vực khác",
+    title: record.title || "(Không có tiêu đề)",
+    content: record.content || "",
+    attachments: record.drive_links ? [{ name: "Google Drive", url: record.drive_links }] : [],
+    status_code: "RECEIVED",
+    status_label: record.status_label || "Mới tiếp nhận",
+    response_content: record.response_content || ""
+  };
+
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      "Prefer": "resolution=merge-duplicates"
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  UrlFetchApp.fetch(SUPABASE_REST_URL, options);
 }

@@ -375,14 +375,13 @@ function initFeedbackForm() {
 
       if (window.EaSupDB) {
         await EaSupDB.insert(feedbackRecord);
-        // TỰ ĐỘNG GỬI SANG POSTGRESQL (NẾU CÓ CẤU HÌNH)
-        if (EaSupDB.saveToPostgres) {
-          EaSupDB.saveToPostgres(feedbackRecord).catch(() => {});
-        }
       }
 
-      // TỰ ĐỘNG GỬI SANG GOOGLE SHEETS & GOOGLE DRIVE (lehanhkt01@gmail.com)
-      await sendToGoogleSheets(feedbackRecord);
+      // TỰ ĐỘNG GỬI ĐỒNG THỜI SONG SONG: GOOGLE DRIVE/SHEETS + SUPABASE POSTGRESQL
+      await Promise.allSettled([
+        sendToGoogleSheets(feedbackRecord),
+        window.EaSupDB && EaSupDB.saveToPostgres ? EaSupDB.saveToPostgres(feedbackRecord) : Promise.resolve()
+      ]);
 
       // Cập nhật thông tin trong Modal
       document.getElementById('modal-ticket-code').textContent = randomCode;
@@ -561,9 +560,9 @@ function initAdminDashboard() {
       adminModal.classList.add('active');
       await renderAdminTable();
 
-      // Tự động đồng bộ dữ liệu mới nhất từ Google Sheets gửi từ điện thoại cử tri
-      if (window.EaSupDB && EaSupDB.syncFromGoogleSheets) {
-        EaSupDB.syncFromGoogleSheets().then(res => {
+      // Tự động đồng bộ hai chiều ngầm từ Google Sheets lên Supabase PostgreSQL
+      if (window.EaSupDB && EaSupDB.syncSheetsToPostgres) {
+        EaSupDB.syncSheetsToPostgres().then(res => {
           if (res && res.success) {
             renderAdminTable();
           }

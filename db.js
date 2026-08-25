@@ -527,6 +527,9 @@ const EaSupDB = (() => {
   // ============================================================
   // 10. TÍCH HỢP CƠ SỞ DỮ LIỆU POSTGRESQL (Supabase / PostgREST)
   // ============================================================
+  const DEFAULT_POSTGRES_URL = 'https://qgbjiwrjhmfuaqnngrcf.supabase.co';
+  const DEFAULT_POSTGRES_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFnYmppd3JqaG1mdWFxbm5ncmNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1NDIzMzksImV4cCI6MjEwMzExODMzOX0.JJON9OFpawvOWE6kG22iNhmrIQc7rSxrGHih2Hc5zMM';
+
   function cleanPostgresUrl(url) {
     let u = (url || '').trim().replace(/\/+$/, '');
     if (u.endsWith('/rest/v1')) {
@@ -537,8 +540,8 @@ const EaSupDB = (() => {
 
   function getPostgresConfig() {
     return {
-      url: cleanPostgresUrl(localStorage.getItem('easup_postgres_url') || ''),
-      key: (localStorage.getItem('easup_postgres_key') || '').trim()
+      url: cleanPostgresUrl(localStorage.getItem('easup_postgres_url') || DEFAULT_POSTGRES_URL),
+      key: (localStorage.getItem('easup_postgres_key') || DEFAULT_POSTGRES_KEY).trim()
     };
   }
 
@@ -590,35 +593,45 @@ const EaSupDB = (() => {
     if (!cfg.url || !cfg.key) return { success: false, message: 'Chưa cấu hình PostgreSQL' };
 
     try {
+      let atts = record.attachments || [];
+      if (!Array.isArray(atts) || atts.length === 0) {
+        if (record.drive_links && typeof record.drive_links === 'string') {
+          atts = [{ name: 'Google Drive', url: record.drive_links }];
+        } else {
+          atts = [];
+        }
+      }
+
       const payload = {
         ticket_code: record.ticket_code,
         sender_name: record.sender_name || 'Cử tri ẩn danh',
         sender_phone: record.sender_phone || '',
-        village: record.village || record.village_name || '',
-        village_name: record.village || record.village_name || '',
-        category: record.category || record.category_name || '',
-        category_name: record.category || record.category_name || '',
-        title: record.title || '',
+        village: record.village || record.village_name || 'Xã Ea Súp',
+        village_name: record.village || record.village_name || 'Xã Ea Súp',
+        category: record.category || record.category_name || 'Lĩnh vực khác',
+        category_name: record.category || record.category_name || 'Lĩnh vực khác',
+        title: record.title || '(Không có tiêu đề)',
         content: record.content || '',
-        attachments: record.attachments || [],
+        attachments: atts,
         status_code: record.status_code || 'RECEIVED',
         status_label: record.status_label || 'Mới tiếp nhận',
-        response_content: record.response_content || ''
+        response_content: record.response_content || '',
+        created_at: record.created_at ? new Date(record.created_at).toISOString() : new Date().toISOString()
       };
 
-      const response = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks`, {
+      const response = await fetch(`${cfg.url}/rest/v1/citizen_feedbacks?on_conflict=ticket_code`, {
         method: 'POST',
         headers: {
           'apikey': cfg.key,
           'Authorization': `Bearer ${cfg.key}`,
           'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
+          'Prefer': 'resolution=merge-duplicates,return=representation'
         },
         body: JSON.stringify(payload)
       });
 
       if (response.ok) {
-        console.log('✓ Đã lưu phản ánh thành công vào PostgreSQL Database');
+        console.log('✓ Đã lưu phản ánh thành công vào PostgreSQL Database (Supabase)');
         return { success: true };
       } else {
         const errText = await response.text();
