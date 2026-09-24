@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock, User, ArrowLeft, AlertCircle, CheckCircle2, KeyRound } from "lucide-react";
+import { ShieldCheck, Lock, User, ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -38,11 +38,6 @@ export default function AdminLoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFillDemo = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
   };
 
   return (
@@ -157,40 +152,6 @@ export default function AdminLoginPage() {
               {loading ? "Đang xác thực bảo mật..." : "Đăng nhập Hệ thống"}
             </button>
           </form>
-
-          {/* Hộp gợi ý tài khoản nghiệm thu nhanh */}
-          <div className="mt-6 pt-5 border-t border-slate-200">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 uppercase mb-2">
-              <KeyRound className="w-3.5 h-3.5 text-amber-600" />
-              Tài khoản mẫu để nghiệm thu:
-            </div>
-            <div className="space-y-1.5 text-xs">
-              <div
-                onClick={() => handleFillDemo("admin", "Admin@EaSup2026!")}
-                className="p-2 bg-slate-100 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded cursor-pointer transition flex items-center justify-between"
-              >
-                <span>
-                  <strong className="text-slate-900">admin</strong> /{" "}
-                  <code className="text-red-700 font-mono">Admin@EaSup2026!</code>
-                </span>
-                <span className="text-[10px] text-slate-500 bg-white px-1.5 py-0.5 rounded border">
-                  Điền nhanh
-                </span>
-              </div>
-              <div
-                onClick={() => handleFillDemo("lehanh", "123456")}
-                className="p-2 bg-slate-100 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded cursor-pointer transition flex items-center justify-between"
-              >
-                <span>
-                  <strong className="text-slate-900">lehanh</strong> /{" "}
-                  <code className="text-red-700 font-mono">123456</code>
-                </span>
-                <span className="text-[10px] text-slate-500 bg-white px-1.5 py-0.5 rounded border">
-                  Điền nhanh
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
