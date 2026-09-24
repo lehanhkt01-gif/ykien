@@ -1,0 +1,142 @@
+// ============================================================
+// PRISMA SCHEMA - CỔNG THÔNG TIN TRẢ LỜI Ý KIẾN CỬ TRI XÃ EA SÚP
+// Tương thích PostgreSQL 16 và Docker Compose
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. BẢNG Ý KIẾN / PHẢN ÁNH CỦA CỬ TRI
+model VoterFeedback {
+  id               Int               @id @default(autoincrement())
+  ticketCode       String            @unique // Mã tra cứu: EASUP-PA-XXXXXX
+  voterName        String            @default("Cử tri ẩn danh")
+  phone            String?           // Số điện thoại để tra cứu/nhận thông báo
+  village          String            // Thuộc 20 thôn, buôn xã Ea Súp
+  category         String            // Đất đai, Môi trường, Chế độ chính sách, Giao thông, An ninh trật tự...
+  content          String            @db.Text // Nội dung phản ánh của cử tri
+  status           String            @default("Đã tiếp nhận") // "Đã tiếp nhận" | "Đang xử lý" | "Đã trả lời"
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // Thống kê số lượng đánh giá của nhân dân
+  ratingVerySatisfied Int              @default(0) // Số lượt Rất hài lòng (Màu xanh)
+  ratingSatisfied     Int              @default(0) // Số lượt Hài lòng (Màu vàng)
+  ratingUnsatisfied   Int              @default(0) // Số lượt Chưa hài lòng (Màu đỏ)
+
+  // Quan hệ 1-1 với văn bản trả lời chính thức
+  officialResponse OfficialResponse?
+  // Danh sách đánh giá chi tiết của cử tri
+  ratings          FeedbackRating[]
+
+  @@index([village])
+  @@index([category])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+}
+
+// 2. BẢNG NỘI DUNG TRẢ LỜI CHÍNH THỨC CỦA CƠ QUAN CHỨC NĂNG
+model OfficialResponse {
+  id              Int           @id @default(autoincrement())
+  feedbackId      Int           @unique
+  feedback        VoterFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  answeringOrg    String        // Cơ quan trả lời: UBND xã, Ban Công an, Ban Địa chính - Xây dựng, MTTQ...
+  responseContent String        @db.Text // Nội dung trả lời chi tiết
+  documentUrl     String?       // Link file/ảnh văn bản giải quyết có dấu đỏ
+  answeredAt      DateTime      @default(now())
+  answeredBy      String        // Tên hoặc chức vụ cán bộ phụ trách trả lời
+}
+
+// 3. BẢNG LƯU ĐÁNH GIÁ CỦA CỬ TRI THEO SỐ ĐIỆN THOẠI
+model FeedbackRating {
+  id         Int           @id @default(autoincrement())
+  feedbackId Int
+  feedback   VoterFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  voterPhone String        // Số điện thoại cử tri đăng nhập
+  voterName  String        // Tên cử tri
+  rating     String        // "Rất hài lòng" | "Hài lòng" | "Chưa hài lòng"
+  createdAt  DateTime      @default(now())
+
+  @@unique([feedbackId, voterPhone])
+  @@index([feedbackId])
+}
+
+// 4. BẢNG NGƯỜI DÙNG & XÁC THỰC AUTH.JS (CỬ TRI & CÁN BỘ)
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  
+  // Thông tin cử tri Ea Súp
+  phone         String?   // Số điện thoại cử tri
+  village       String?   // Thuộc 20 thôn, buôn xã Ea Súp
+  role          String    @default("USER") // 'USER' (Người dân), 'CADRE' (Cán bộ), 'ADMIN' (Quản trị)
+  
+  // Tương thích đăng nhập cán bộ truyền thống
+  username      String?   @unique
+  passwordHash  String?
+  fullName      String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// 5. BẢNG CẤU HÌNH HỆ THỐNG (API KEY CHATBOT, THÔNG SỐ AI)
+model SystemSetting {
+  key         String   @id // Ví dụ: "CHATBOT_API_KEY", "CHATBOT_MODEL", "SYSTEM_PROMPT"
+  value       String   @db.Text
+  description String?
+  updatedAt   DateTime @updatedAt
+}

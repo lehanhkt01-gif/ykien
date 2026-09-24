@@ -1,0 +1,77 @@
+services:
+  # 1. Cơ sở dữ liệu PostgreSQL 16 Alpine (Bảo mật tối đa, không expose port ra ngoài)
+  db:
+    image: postgres:16-alpine
+    container_name: easup_postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-EaSupSecuredPass2026!}
+      POSTGRES_DB: ${DB_NAME:-voter_feedback_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal_net
+    # Tuyệt đối KHÔNG cấu hình ports: - "5432:5432" để tránh lộ CSDL ra Internet công cộng
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-voter_feedback_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Ứng dụng Next.js 15 Standalone
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: easup_web_app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-EaSupSecuredPass2026!}@db:5432/${DB_NAME:-voter_feedback_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-easup_voter_feedback_jwt_secret_super_key_2026_production}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@EaSup2026!}
+      PORT: 3000
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal_net
+    ports:
+      - "3000:3000"
+
+  # 3. Nginx Reverse Proxy đón tên miền (ykien.easupso.com / traloicutri.easupso.com)
+  nginx:
+    image: nginx:alpine
+    container_name: easup_nginx_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+    networks:
+      - internal_net
+
+  # 4. Giám sát Logs hệ thống thời gian thực Dozzle
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: easup_dozzle_logs
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8888:8080"
+    networks:
+      - internal_net
+
+# Khai báo Volume dữ liệu bền vững và Network nội bộ
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  internal_net:
+    driver: bridge

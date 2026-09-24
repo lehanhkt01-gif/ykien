@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "passwordHash": "$2a$10$PuMXtAWwA0y/W5bln/norOvRZIYnhjqfX.rayzTvD1LnMr/o.Q8Ci",
+    "fullName": "Quản Trị Viên Hệ Thống MTTQ Xã Ea Súp",
+    "role": "ADMIN",
+    "active": true,
+    "createdAt": "2026-09-24T14:09:58.002Z"
+  },
+  {
+    "id": 2,
+    "username": "lehanh",
+    "passwordHash": "$2a$10$H7H/XNvqDKN1ubrJs0OqLOhQxVyc.jOpl6gGhZGQVCCU0SpA2ymqa",
+    "fullName": "Lê Hạnh - Cán bộ Ban Thường trực MTTQ",
+    "role": "OFFICER",
+    "active": true,
+    "createdAt": "2026-09-24T14:09:58.085Z"
+  },
+  {
+    "email": "zipzenhanh@gmail.com",
+    "name": "Hanh MTTQ",
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocLqES8eeda8FCyXUWJWSNMcROWdUsj8sBNKZVopkTJiIWbkhY8=s96-c",
+    "role": "USER",
+    "id": "user_1790265625380",
+    "createdAt": "2026-09-24T16:00:25.380Z",
+    "updatedAt": "2026-09-24T16:06:49.307Z"
+  }
+]
