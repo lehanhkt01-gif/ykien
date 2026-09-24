@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await findUserByUsername(username.trim());
-    if (!user || !user.active) {
+    if (!user || !user.active || !user.passwordHash) {
       return NextResponse.json(
         { success: false, message: "Tài khoản hoặc mật khẩu không chính xác" },
         { status: 401 }
@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
 
     const token = signToken({
       userId: user.id,
-      username: user.username,
-      fullName: user.fullName,
+      username: user.username || username.trim(),
+      fullName: user.fullName || user.name || "Cán bộ quản trị",
       role: user.role,
     });
 

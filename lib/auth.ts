@@ -5,7 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "easup_voter_feedback_jwt_secret_su
 export const AUTH_COOKIE_NAME = "easup_auth_token";
 
 export interface TokenPayload {
-  userId: number;
+  userId: number | string;
   username: string;
   fullName: string;
   role: string;
