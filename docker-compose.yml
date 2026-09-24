@@ -48,7 +48,7 @@ services:
     networks:
       - internal_net
     ports:
-      - "3000:3000"
+      - "3005:3000"
 
 # Khai báo Volume dữ liệu bền vững và Network nội bộ
 volumes:
