@@ -1304,15 +1304,41 @@ export default function HomePage() {
                 </div>
 
                 {selectedResponseItem.officialResponse.documentUrl && (
-                  <a
-                    href={selectedResponseItem.officialResponse.documentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white font-bold text-xs shadow-xs transition cursor-pointer"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    Xem văn bản trả lời có dấu đỏ
-                  </a>
+                  <div className="w-full pt-2 border-t border-slate-200 mt-2">
+                    <span className="block text-slate-600 font-semibold mb-1.5 flex items-center gap-1 text-[11px]">
+                      <Paperclip className="w-3.5 h-3.5 text-red-700" />
+                      Văn bản / Tệp đính kèm có dấu đỏ:
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedResponseItem.officialResponse.documentUrl
+                        .split(",")
+                        .map((u) => u.trim())
+                        .filter(Boolean)
+                        .map((url, uIdx, allUrls) => {
+                          const isPdf = url.toLowerCase().includes(".pdf");
+                          return (
+                            <a
+                              key={uIdx}
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                            >
+                              {isPdf ? (
+                                <FileText className="w-3.5 h-3.5 text-amber-200" />
+                              ) : (
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              )}
+                              <span>
+                                {allUrls.length > 1
+                                  ? `Xem văn bản/ảnh ${uIdx + 1}${isPdf ? " (PDF)" : ""}`
+                                  : "Xem văn bản trả lời có dấu đỏ"}
+                              </span>
+                            </a>
+                          );
+                        })}
+                    </div>
+                  </div>
                 )}
               </div>
 

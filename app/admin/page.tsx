@@ -38,6 +38,8 @@ import {
   Sparkles,
   FilterX,
   UserCheck,
+  Save,
+  FileText,
 } from "lucide-react";
 import { VILLAGES, CATEGORIES, ANSWERING_ORGS, STATUS_LIST } from "@/lib/constants";
 import * as XLSX from "xlsx";
@@ -118,6 +120,9 @@ export default function AdminDashboardPage() {
   const [documentUrl, setDocumentUrl] = useState("");
   const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+  const [responseFiles, setResponseFiles] = useState<File[]>([]);
+  const [responseFilesError, setResponseFilesError] = useState<string | null>(null);
+  const [isUploadingResponseFiles, setIsUploadingResponseFiles] = useState(false);
 
   // 2. Modal Thêm Mới Hồ Sơ
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -328,10 +333,49 @@ export default function AdminDashboardPage() {
     setAnsweringOrg(item.officialResponse?.answeringOrg || ANSWERING_ORGS[0]);
     setResponseContent(item.officialResponse?.responseContent || "");
     setDocumentUrl(item.officialResponse?.documentUrl || "");
+    setResponseFiles([]);
+    setResponseFilesError(null);
     setActionSuccessMsg(null);
   };
 
-  // Gửi văn bản trả lời
+  // Chọn file hình ảnh, PDF đính kèm trả lời (tối đa 5 file, mỗi file < 5MB)
+  const handleResponseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setResponseFilesError(null);
+    if (!e.target.files) return;
+    const selected = Array.from(e.target.files);
+
+    if (responseFiles.length + selected.length > 5) {
+      setResponseFilesError("Chỉ được đính kèm tối đa 5 file (ảnh hoặc PDF).");
+      return;
+    }
+
+    const invalidType = selected.find((f) => {
+      const ext = f.name.toLowerCase();
+      const isImg = [".jpg", ".jpeg", ".png", ".webp", ".gif"].some((e) => ext.endsWith(e));
+      const isPdf = ext.endsWith(".pdf");
+      return !isImg && !isPdf;
+    });
+
+    if (invalidType) {
+      setResponseFilesError(`Tệp "${invalidType.name}" không hợp lệ. Chỉ chấp nhận tệp hình ảnh (JPG, PNG, WEBP) hoặc PDF.`);
+      return;
+    }
+
+    const oversizeFile = selected.find((f) => f.size > 5 * 1024 * 1024);
+    if (oversizeFile) {
+      setResponseFilesError(`Tệp "${oversizeFile.name}" vượt quá dung lượng cho phép (tối đa dưới 5MB/file).`);
+      return;
+    }
+
+    setResponseFiles((prev) => [...prev, ...selected]);
+    e.target.value = "";
+  };
+
+  const handleRemoveResponseFile = (index: number) => {
+    setResponseFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Gửi thông tin trả lời
   const handleSubmitResponse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFeedback) return;
@@ -342,6 +386,31 @@ export default function AdminDashboardPage() {
 
     setIsSubmittingResponse(true);
     try {
+      let finalDocUrl = documentUrl.trim();
+
+      // Nếu có tệp mới được đính kèm, thực hiện upload lên server
+      if (responseFiles.length > 0) {
+        setIsUploadingResponseFiles(true);
+        const formData = new FormData();
+        responseFiles.forEach((file) => formData.append("files", file));
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.success && Array.isArray(uploadData.files)) {
+          const uploadedUrls = uploadData.files.map((f: any) => f.url).join(", ");
+          finalDocUrl = finalDocUrl ? `${finalDocUrl}, ${uploadedUrls}` : uploadedUrls;
+        } else {
+          alert(uploadData.message || "Lỗi khi tải tệp lên máy chủ");
+          setIsSubmittingResponse(false);
+          setIsUploadingResponseFiles(false);
+          return;
+        }
+        setIsUploadingResponseFiles(false);
+      }
+
       const res = await fetch("/api/admin/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -349,17 +418,18 @@ export default function AdminDashboardPage() {
           feedbackId: selectedFeedback.id,
           answeringOrg,
           responseContent: responseContent.trim(),
-          documentUrl: documentUrl.trim(),
+          documentUrl: finalDocUrl,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setActionSuccessMsg("Đã ban hành văn bản trả lời và cập nhật trạng thái thành công!");
+        setActionSuccessMsg("Đã lưu thông tin trả lời và cập nhật trạng thái thành công!");
         loadFeedbacks();
         setTimeout(() => {
           setSelectedFeedback(null);
           setActionSuccessMsg(null);
+          setResponseFiles([]);
         }, 1200);
       } else {
         alert(data.message || "Lỗi khi cập nhật");
@@ -369,6 +439,7 @@ export default function AdminDashboardPage() {
       alert("Đã xảy ra lỗi mạng");
     } finally {
       setIsSubmittingResponse(false);
+      setIsUploadingResponseFiles(false);
     }
   };
 
@@ -1274,16 +1345,98 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Link văn bản / ảnh có dấu đỏ giải quyết (Tùy chọn)
-                  </label>
-                  <input
-                    type="url"
-                    value={documentUrl}
-                    onChange={(e) => setDocumentUrl(e.target.value)}
-                    placeholder="https://... (Link Google Drive, hình ảnh hoặc tài liệu đính kèm)"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-red-600 focus:outline-none"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Tệp văn bản / hình ảnh có dấu đỏ giải quyết (Tùy chọn)
+                    </label>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Tối đa 5 file, dưới 5MB/file (PDF, JPG, PNG, WEBP)
+                    </span>
+                  </div>
+
+                  {/* Nút chọn tệp từ máy */}
+                  <div className="mb-2">
+                    <label className="flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-dashed border-red-200 hover:border-red-500 hover:bg-red-50/50 rounded-xl cursor-pointer transition text-xs font-semibold text-slate-700 group bg-slate-50">
+                      <Upload className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
+                      <span>Tải văn bản PDF hoặc ảnh có dấu đỏ từ thiết bị</span>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*,.pdf"
+                        onChange={handleResponseFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Lỗi chọn file */}
+                  {responseFilesError && (
+                    <div className="p-2 mb-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{responseFilesError}</span>
+                    </div>
+                  )}
+
+                  {/* Danh sách file đính kèm đã chọn */}
+                  {responseFiles.length > 0 && (
+                    <div className="space-y-1.5 mb-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-700">
+                          Tệp đính kèm đã chọn ({responseFiles.length}/5):
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          (Dung lượng mỗi file đều hợp lệ &lt; 5MB)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {responseFiles.map((file, idx) => {
+                          const isPdf = file.name.toLowerCase().endsWith(".pdf");
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs shadow-2xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                {isPdf ? (
+                                  <FileText className="w-4 h-4 text-red-600 flex-shrink-0" />
+                                ) : (
+                                  <Paperclip className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                )}
+                                <div className="truncate min-w-0">
+                                  <p className="truncate font-semibold text-slate-800 text-[11px]">{file.name}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono">
+                                    {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveResponseFile(idx)}
+                                className="p-1 text-slate-400 hover:text-red-600 rounded transition cursor-pointer"
+                                title="Bỏ chọn tệp này"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hoặc nhập Link văn bản */}
+                  <div className="mt-2">
+                    <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                      Hoặc dán đường link văn bản/ảnh trực tuyến (Google Drive, Cloud...)
+                    </label>
+                    <input
+                      type="text"
+                      value={documentUrl}
+                      onChange={(e) => setDocumentUrl(e.target.value)}
+                      placeholder="https://... (Link Google Drive, hình ảnh hoặc tài liệu đính kèm)"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-red-600 focus:outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
@@ -1296,18 +1449,18 @@ export default function AdminDashboardPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmittingResponse}
+                    disabled={isSubmittingResponse || isUploadingResponseFiles}
                     className="px-6 py-2 bg-red-700 hover:bg-red-800 text-white font-bold rounded-lg text-xs flex items-center gap-2 cursor-pointer shadow disabled:opacity-50"
                   >
-                    {isSubmittingResponse ? (
+                    {isSubmittingResponse || isUploadingResponseFiles ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        Đang lưu...
+                        {isUploadingResponseFiles ? "Đang tải tệp lên..." : "Đang lưu..."}
                       </>
                     ) : (
                       <>
-                        <FileCheck className="w-4 h-4" />
-                        Ban hành văn bản trả lời
+                        <Save className="w-4 h-4" />
+                        Lưu thông tin trả lời
                       </>
                     )}
                   </button>

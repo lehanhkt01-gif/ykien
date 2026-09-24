@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs/promises";
 
 // Cấu hình giới hạn
-const MAX_FILES = 4;
+const MAX_FILES = 5;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Định dạng tệp cho phép
