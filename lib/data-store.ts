@@ -61,6 +61,7 @@ export interface UserType {
   village?: string | null;
   image?: string | null;
   role: string;
+  org?: string | null;
   active?: boolean;
   createdAt: Date | string;
   updatedAt?: Date | string;
@@ -257,36 +258,43 @@ function getMemorySettings(): Record<string, string> {
 
 export const DEFAULT_OFFICER_ACCOUNTS = [
   {
+    id: 101,
     username: "mttq",
     fullName: "Cán bộ Ban Thường trực MTTQ Xã Ea Súp",
     org: "Ban Thường trực Ủy ban MTTQ Việt Nam Xã Ea Súp",
   },
   {
+    id: 102,
     username: "ubnd",
     fullName: "Cán bộ Ủy ban Nhân dân Xã Ea Súp",
     org: "Ủy ban Nhân dân xã Ea Súp",
   },
   {
+    id: 103,
     username: "hdnd",
     fullName: "Cán bộ Thường trực Hội đồng Nhân dân Xã Ea Súp",
     org: "Thường trực Hội đồng Nhân dân xã Ea Súp",
   },
   {
+    id: 104,
     username: "danguy",
     fullName: "Cán bộ Đảng ủy Xã Ea Súp",
     org: "Đảng ủy xã Ea Súp",
   },
   {
+    id: 105,
     username: "congan",
     fullName: "Cán bộ Ban Chỉ huy Công an Xã Ea Súp",
     org: "Ban Chỉ huy Công an xã Ea Súp",
   },
   {
+    id: 106,
     username: "yte",
     fullName: "Cán bộ Trạm Y tế Xã Ea Súp",
     org: "Trạm Y tế xã Ea Súp",
   },
   {
+    id: 107,
     username: "quansu",
     fullName: "Cán bộ Ban Chỉ huy Quân sự Xã Ea Súp",
     org: "Ban Chỉ huy Quân sự xã Ea Súp",
@@ -296,28 +304,9 @@ export const DEFAULT_OFFICER_ACCOUNTS = [
 function loadUsersFromDisk(): UserType[] {
   ensureDataDir();
   const officerDefaultPass = process.env.OFFICER_DEFAULT_PASSWORD || "12345678@";
-  const adminPass = process.env.ADMIN_PASSWORD || "Admin@EaSup2026!";
-
-  const baseUsers: UserType[] = [
-    {
-      id: 1,
-      username: "admin",
-      passwordHash: bcrypt.hashSync(adminPass, 10),
-      fullName: "Quản Trị Viên Hệ Thống MTTQ Xã Ea Súp",
-      role: "ADMIN",
-      active: true,
-      createdAt: new Date(),
-    },
-    {
-      id: 2,
-      username: "lehanh",
-      passwordHash: bcrypt.hashSync("123456", 10),
-      fullName: "Lê Hạnh - Cán bộ Ban Thường trực MTTQ",
-      role: "OFFICER",
-      active: true,
-      createdAt: new Date(),
-    },
-  ];
+  const adminUsername = process.env.ADMIN_USERNAME || "lehanhkt01";
+  let adminPass = process.env.ADMIN_PASSWORD || "Hh@$123456";
+  if (adminPass === "Hh@") adminPass = "Hh@$123456";
 
   let list: UserType[] = [];
   try {
@@ -330,32 +319,57 @@ function loadUsersFromDisk(): UserType[] {
     }
   } catch (err) {}
 
-  if (list.length === 0) {
-    list = [...baseUsers];
+  // 1. Dọn dẹp tài khoản admin cũ (admin, lehanh) nếu có, đảm bảo duy nhất 1 tài khoản ADMIN lehanhkt01
+  list = list.filter((u) => {
+    if (u.username === "admin" || u.username === "lehanh") return false;
+    return true;
+  });
+
+  // 2. Đảm bảo duy nhất 1 tài khoản ADMIN toàn quyền lehanhkt01
+  const adminHash = bcrypt.hashSync(adminPass, 10);
+  const adminIdx = list.findIndex(
+    (u) => u.username?.toLowerCase() === adminUsername.toLowerCase() || u.role === "ADMIN"
+  );
+  if (adminIdx >= 0) {
+    list[adminIdx].username = adminUsername;
+    list[adminIdx].passwordHash = adminHash;
+    list[adminIdx].fullName = "Quản Trị Viên Toàn Quyền Xã Ea Súp";
+    list[adminIdx].role = "ADMIN";
+    list[adminIdx].active = true;
+  } else {
+    list.unshift({
+      id: 1,
+      username: adminUsername,
+      passwordHash: adminHash,
+      fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
+      role: "ADMIN",
+      active: true,
+      createdAt: new Date(),
+    });
   }
 
-  // Luôn đồng bộ 7 tài khoản cán bộ công vụ mới từ cấu hình .env
-  let maxId = list.reduce((m, u) => Math.max(m, Number(u.id) || 0), 2);
+  // 3. Khởi tạo 7 tài khoản cán bộ công vụ mặc định nếu chưa tồn tại
   const officerHash = bcrypt.hashSync(officerDefaultPass, 10);
-
   for (const officer of DEFAULT_OFFICER_ACCOUNTS) {
-    const existing = list.find((u) => u.username === officer.username);
-    if (existing) {
-      existing.fullName = officer.fullName;
-      existing.role = "OFFICER";
-      existing.active = true;
-      existing.passwordHash = officerHash;
-    } else {
-      maxId++;
+    const existing = list.find(
+      (u) => u.id === officer.id || u.username?.toLowerCase() === officer.username.toLowerCase()
+    );
+    if (!existing) {
       list.push({
-        id: maxId,
+        id: officer.id,
         username: officer.username,
         passwordHash: officerHash,
         fullName: officer.fullName,
+        org: officer.org,
         role: "OFFICER",
         active: true,
         createdAt: new Date(),
       });
+    } else {
+      if (!existing.org) existing.org = officer.org;
+      if (!existing.fullName) existing.fullName = officer.fullName;
+      existing.role = "OFFICER";
+      existing.active = existing.active ?? true;
     }
   }
 
@@ -731,70 +745,276 @@ export async function getFeedbackStats(isAdmin: boolean = false) {
 
 export async function findUserByUsername(username: string) {
   const cleanUsername = username.trim().toLowerCase();
-  const officerDefaultPass = process.env.OFFICER_DEFAULT_PASSWORD || "12345678@";
+  const adminUsername = (process.env.ADMIN_USERNAME || "lehanhkt01").toLowerCase();
+  let adminPass = process.env.ADMIN_PASSWORD || "Hh@$123456";
+  if (adminPass === "Hh@") adminPass = "Hh@$123456";
 
-  // Kiểm tra nếu là một trong 7 tài khoản cán bộ công vụ phụ trách trả lời
-  const officerConfig = DEFAULT_OFFICER_ACCOUNTS.find(
-    (o) => o.username.toLowerCase() === cleanUsername
-  );
-
-  if (officerConfig) {
-    const passwordHash = bcrypt.hashSync(officerDefaultPass, 10);
+  // 1. Nếu là tài khoản Admin toàn quyền duy nhất
+  if (cleanUsername === adminUsername) {
+    const passwordHash = bcrypt.hashSync(adminPass, 10);
     try {
       if (await isDatabaseOnline()) {
-        const dbUser = await prisma.user.upsert({
-          where: { username: cleanUsername },
+        const dbAdmin = await prisma.user.upsert({
+          where: { username: adminUsername },
           update: {
             passwordHash,
-            fullName: officerConfig.fullName,
-            role: "OFFICER",
+            fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
+            role: "ADMIN",
             active: true,
           },
           create: {
-            username: cleanUsername,
+            username: adminUsername,
             passwordHash,
-            fullName: officerConfig.fullName,
-            role: "OFFICER",
+            fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
+            role: "ADMIN",
             active: true,
           },
         });
-        if (dbUser) return dbUser;
+        if (dbAdmin) return dbAdmin;
       }
     } catch (e) {}
 
-    // Fallback file/memory
     const users = getMemoryUsers();
-    let existing = users.find((u) => u.username?.toLowerCase() === cleanUsername);
-    if (!existing) {
-      existing = {
-        id: users.length + 1,
-        username: cleanUsername,
+    let admin = users.find((u) => u.username?.toLowerCase() === adminUsername);
+    if (!admin) {
+      admin = {
+        id: 1,
+        username: adminUsername,
         passwordHash,
-        fullName: officerConfig.fullName,
-        role: "OFFICER",
+        fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
+        role: "ADMIN",
         active: true,
         createdAt: new Date(),
       };
-      users.push(existing);
-      saveUsersToDisk(users);
+      users.unshift(admin);
     } else {
-      existing.passwordHash = passwordHash;
-      existing.active = true;
-      existing.role = "OFFICER";
-      saveUsersToDisk(users);
+      admin.passwordHash = passwordHash;
+      admin.role = "ADMIN";
+      admin.active = true;
     }
-    return existing;
+    saveUsersToDisk(users);
+    return admin;
   }
 
+  // 2. Tìm trong database trước nếu online
   try {
-    const user = await prisma.user.findUnique({
-      where: { username: cleanUsername },
-    });
-    if (user) return user;
+    if (await isDatabaseOnline()) {
+      const user = await prisma.user.findUnique({
+        where: { username: cleanUsername },
+      });
+      if (user) return user;
+    }
   } catch (error) {}
 
+  // 3. Tìm trong file JSON / Memory đã lưu (hỗ trợ tài khoản đã được Admin đổi tên/mật khẩu)
   const users = getMemoryUsers();
-  return users.find((u) => u.username?.toLowerCase() === cleanUsername) || null;
+  const matchedUser = users.find((u) => u.username?.toLowerCase() === cleanUsername);
+  if (matchedUser) {
+    return matchedUser;
+  }
+
+  // 4. Nếu chưa có nhưng là 1 trong DEFAULT_OFFICER_ACCOUNTS (fallback khởi tạo ban đầu)
+  const defaultOfficer = DEFAULT_OFFICER_ACCOUNTS.find(
+    (o) => o.username.toLowerCase() === cleanUsername
+  );
+  if (defaultOfficer) {
+    const officerDefaultPass = process.env.OFFICER_DEFAULT_PASSWORD || "12345678@";
+    const passwordHash = bcrypt.hashSync(officerDefaultPass, 10);
+    const newOfficer: UserType = {
+      id: defaultOfficer.id,
+      username: defaultOfficer.username,
+      passwordHash,
+      fullName: defaultOfficer.fullName,
+      org: defaultOfficer.org,
+      role: "OFFICER",
+      active: true,
+      createdAt: new Date(),
+    };
+    users.push(newOfficer);
+    saveUsersToDisk(users);
+    return newOfficer;
+  }
+
+  return null;
+}
+
+/**
+ * Lấy danh sách tài khoản cán bộ công vụ có quyền "Trả lời"
+ */
+export async function getOfficerAccounts() {
+  const users = getMemoryUsers();
+  return users
+    .filter((u) => u.role === "OFFICER" && u.username)
+    .map((u) => ({
+      id: u.id,
+      username: u.username || "",
+      fullName: u.fullName || u.name || "",
+      org: u.org || "",
+      role: u.role,
+      active: u.active ?? true,
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt,
+    }));
+}
+
+/**
+ * Cập nhật tài khoản cán bộ: tên đăng nhập và mật khẩu (và họ tên / cơ quan nếu có)
+ */
+export async function updateOfficerAccount(data: {
+  id: number | string;
+  username: string;
+  password?: string;
+  fullName?: string;
+  org?: string;
+  active?: boolean;
+}) {
+  const users = getMemoryUsers();
+  const cleanNewUsername = data.username.trim().toLowerCase();
+  const adminUsername = (process.env.ADMIN_USERNAME || "lehanhkt01").toLowerCase();
+
+  if (!cleanNewUsername) {
+    throw new Error("Tên đăng nhập không được để trống");
+  }
+
+  if (cleanNewUsername === adminUsername || cleanNewUsername === "admin") {
+    throw new Error("Tên đăng nhập này trùng với tài khoản Quản trị viên");
+  }
+
+  // Kiểm tra trùng username với tài khoản khác
+  const duplicate = users.find(
+    (u) => String(u.id) !== String(data.id) && u.username?.toLowerCase() === cleanNewUsername
+  );
+  if (duplicate) {
+    throw new Error(`Tên đăng nhập "${cleanNewUsername}" đã được sử dụng bởi cán bộ khác`);
+  }
+
+  const target = users.find((u) => String(u.id) === String(data.id));
+  if (!target) {
+    throw new Error("Không tìm thấy tài khoản cán bộ cần cập nhật");
+  }
+
+  const oldUsername = target.username;
+  target.username = cleanNewUsername;
+  if (data.fullName !== undefined) target.fullName = data.fullName.trim();
+  if (data.org !== undefined) target.org = data.org.trim();
+  if (data.active !== undefined) target.active = data.active;
+  target.updatedAt = new Date();
+
+  let passwordChanged = false;
+  if (data.password && data.password.trim().length > 0) {
+    if (data.password.trim().length < 6) {
+      throw new Error("Mật khẩu mới phải có ít nhất 6 ký tự");
+    }
+    target.passwordHash = bcrypt.hashSync(data.password.trim(), 10);
+    passwordChanged = true;
+  }
+
+  saveUsersToDisk(users);
+
+  // Cập nhật CSDL PostgreSQL nếu online
+  try {
+    if (await isDatabaseOnline()) {
+      if (oldUsername && oldUsername.toLowerCase() !== cleanNewUsername) {
+        await prisma.user.deleteMany({ where: { username: oldUsername } });
+      }
+      await prisma.user.upsert({
+        where: { username: cleanNewUsername },
+        update: {
+          fullName: target.fullName,
+          role: "OFFICER",
+          active: target.active ?? true,
+          ...(passwordChanged ? { passwordHash: target.passwordHash } : {}),
+        },
+        create: {
+          username: cleanNewUsername,
+          passwordHash: target.passwordHash || bcrypt.hashSync("12345678@", 10),
+          fullName: target.fullName || "Cán bộ công vụ",
+          role: "OFFICER",
+          active: target.active ?? true,
+        },
+      });
+    }
+  } catch (dbErr) {
+    console.error("Lỗi đồng bộ officer sang DB:", dbErr);
+  }
+
+  return {
+    id: target.id,
+    username: target.username,
+    fullName: target.fullName,
+    org: target.org,
+    role: target.role,
+    active: target.active,
+    updatedAt: target.updatedAt,
+  };
+}
+
+/**
+ * Tạo mới tài khoản cán bộ công vụ
+ */
+export async function createOfficerAccount(data: {
+  username: string;
+  password?: string;
+  fullName: string;
+  org: string;
+}) {
+  const users = getMemoryUsers();
+  const cleanUsername = data.username.trim().toLowerCase();
+  const adminUsername = (process.env.ADMIN_USERNAME || "lehanhkt01").toLowerCase();
+
+  if (!cleanUsername) throw new Error("Tên đăng nhập không được để trống");
+  if (cleanUsername === adminUsername || cleanUsername === "admin") {
+    throw new Error("Tên đăng nhập này trùng với tài khoản Quản trị viên");
+  }
+
+  const duplicate = users.find((u) => u.username?.toLowerCase() === cleanUsername);
+  if (duplicate) {
+    throw new Error(`Tên đăng nhập "${cleanUsername}" đã tồn tại`);
+  }
+
+  const pass = data.password?.trim() || process.env.OFFICER_DEFAULT_PASSWORD || "12345678@";
+  if (pass.length < 6) {
+    throw new Error("Mật khẩu phải có ít nhất 6 ký tự");
+  }
+
+  const maxId = users.reduce((m, u) => Math.max(m, Number(u.id) || 0), 100);
+  const newOfficer: UserType = {
+    id: maxId + 1,
+    username: cleanUsername,
+    passwordHash: bcrypt.hashSync(pass, 10),
+    fullName: data.fullName.trim() || `Cán bộ ${data.org.trim()}`,
+    org: data.org.trim(),
+    role: "OFFICER",
+    active: true,
+    createdAt: new Date(),
+  };
+
+  users.push(newOfficer);
+  saveUsersToDisk(users);
+
+  try {
+    if (await isDatabaseOnline()) {
+      await prisma.user.create({
+        data: {
+          username: cleanUsername,
+          passwordHash: newOfficer.passwordHash!,
+          fullName: newOfficer.fullName!,
+          role: "OFFICER",
+          active: true,
+        },
+      });
+    }
+  } catch (e) {}
+
+  return {
+    id: newOfficer.id,
+    username: newOfficer.username,
+    fullName: newOfficer.fullName,
+    org: newOfficer.org,
+    role: newOfficer.role,
+    active: newOfficer.active,
+    createdAt: newOfficer.createdAt,
+  };
 }
 
 export async function rateFeedback(data: {

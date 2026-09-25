@@ -7,35 +7,29 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Bắt đầu nạp dữ liệu mẫu cho hệ thống Xã Ea Súp...");
 
-  // 1. Tạo tài khoản quản trị
-  const adminPasswordHash = await bcrypt.hash("Admin@EaSup2026!", 10);
-  const officerPasswordHash = await bcrypt.hash("123456", 10);
+  // 1. Tạo tài khoản quản trị lehanhkt01 duy nhất
+  const adminPasswordHash = await bcrypt.hash("Hh@$123456", 10);
+  await prisma.user.deleteMany({
+    where: { username: { in: ["admin", "lehanh"] } },
+  });
 
   const admin = await prisma.user.upsert({
-    where: { username: "admin" },
-    update: {},
-    create: {
-      username: "admin",
+    where: { username: "lehanhkt01" },
+    update: {
       passwordHash: adminPasswordHash,
-      fullName: "Quản Trị Viên Hệ Thống HĐND/UBND",
+      role: "ADMIN",
+      fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
+    },
+    create: {
+      username: "lehanhkt01",
+      passwordHash: adminPasswordHash,
+      fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
       role: "ADMIN",
       active: true,
     },
   });
 
-  const officer = await prisma.user.upsert({
-    where: { username: "lehanh" },
-    update: {},
-    create: {
-      username: "lehanh",
-      passwordHash: officerPasswordHash,
-      fullName: "Lê Hạnh - Cán bộ Ban Thường trực MTTQ",
-      role: "OFFICER",
-      active: true,
-    },
-  });
-
-  console.log(`Đã tạo người dùng: ${admin.username}, ${officer.username}`);
+  console.log(`Đã tạo/cập nhật tài khoản Quản trị viên: ${admin.username}`);
 
   // 2. Dọn dẹp các ý kiến test cũ khỏi CSDL
   const testCodes = [

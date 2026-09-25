@@ -70,8 +70,8 @@ DATABASE_URL="postgresql://\${DB_USER}:\${DB_PASSWORD}@db:5432/\${DB_NAME}?schem
 
 # Bảo mật Cán bộ Quản trị
 JWT_SECRET="${DEFAULT_JWT}"
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=Admin@EaSup2026!
+ADMIN_USERNAME=lehanhkt01
+ADMIN_PASSWORD=Hh@$123456
 EOF
     echo -e "${GREEN}✓ Đã tạo .env thành công với đầy đủ Google OAuth & Auth Secret!${NC}"
 else

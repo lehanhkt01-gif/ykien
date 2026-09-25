@@ -40,6 +40,10 @@ import {
   UserCheck,
   Save,
   FileText,
+  ShieldCheck,
+  Lock,
+  EyeOff,
+  UserCog,
 } from "lucide-react";
 import { VILLAGES, CATEGORIES, ANSWERING_ORGS, STATUS_LIST } from "@/lib/constants";
 import * as XLSX from "xlsx";
@@ -184,6 +188,25 @@ export default function AdminDashboardPage() {
   const [voterNotice, setVoterNotice] = useState<{ success: boolean; msg: string } | null>(null);
   const [selectedVoterDetail, setSelectedVoterDetail] = useState<AdminVoterItem | null>(null);
 
+  // 10. QUẢN LÝ TÀI KHOẢN CÁN BỘ (ADMIN TOÀN QUYỀN ONLY)
+  const [showOfficerModal, setShowOfficerModal] = useState(false);
+  const [officers, setOfficers] = useState<any[]>([]);
+  const [officersLoading, setOfficersLoading] = useState(false);
+  const [officerNotice, setOfficerNotice] = useState<{ success: boolean; msg: string } | null>(null);
+  const [officerSearch, setOfficerSearch] = useState("");
+  const [editingOfficer, setEditingOfficer] = useState<any | null>(null);
+  const [editOfficerUsername, setEditOfficerUsername] = useState("");
+  const [editOfficerPassword, setEditOfficerPassword] = useState("");
+  const [editOfficerFullName, setEditOfficerFullName] = useState("");
+  const [editOfficerOrg, setEditOfficerOrg] = useState("");
+  const [showOfficerPassword, setShowOfficerPassword] = useState(false);
+  const [isSavingOfficer, setIsSavingOfficer] = useState(false);
+  const [showAddOfficerForm, setShowAddOfficerForm] = useState(false);
+  const [newOfficerUsername, setNewOfficerUsername] = useState("");
+  const [newOfficerPassword, setNewOfficerPassword] = useState("12345678@");
+  const [newOfficerFullName, setNewOfficerFullName] = useState("");
+  const [newOfficerOrg, setNewOfficerOrg] = useState<string>(ANSWERING_ORGS[0]);
+
   // Kiểm tra xác thực cán bộ
   const checkAuth = async () => {
     try {
@@ -278,6 +301,127 @@ export default function AdminDashboardPage() {
       setVoterNotice({ success: false, msg: "Lỗi kết nối máy chủ khi xóa cử tri" });
     } finally {
       setIsDeletingVoter(false);
+    }
+  };
+
+  // Tải danh sách cán bộ
+  const loadOfficers = async () => {
+    setOfficersLoading(true);
+    try {
+      const res = await fetch("/api/admin/officers");
+      const data = await res.json();
+      if (data.success) {
+        setOfficers(data.officers || []);
+      }
+    } catch (e) {
+      console.error("Lỗi nạp danh sách cán bộ:", e);
+    } finally {
+      setOfficersLoading(false);
+    }
+  };
+
+  // Mở modal Quản lý tài khoản cán bộ
+  const handleOpenOfficerModal = () => {
+    setShowOfficerModal(true);
+    setOfficerNotice(null);
+    setEditingOfficer(null);
+    setShowAddOfficerForm(false);
+    setOfficerSearch("");
+    loadOfficers();
+  };
+
+  // Bắt đầu sửa tài khoản cán bộ
+  const handleStartEditOfficer = (officer: any) => {
+    setEditingOfficer(officer);
+    setEditOfficerUsername(officer.username);
+    setEditOfficerPassword("");
+    setEditOfficerFullName(officer.fullName);
+    setEditOfficerOrg(officer.org);
+    setShowOfficerPassword(false);
+    setOfficerNotice(null);
+  };
+
+  // Lưu chỉnh sửa tài khoản cán bộ
+  const handleSaveOfficerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOfficer) return;
+
+    if (!editOfficerUsername.trim()) {
+      setOfficerNotice({ success: false, msg: "Tên đăng nhập không được để trống" });
+      return;
+    }
+
+    if (editOfficerPassword.trim() && editOfficerPassword.trim().length < 6) {
+      setOfficerNotice({ success: false, msg: "Mật khẩu mới phải có ít nhất 6 ký tự" });
+      return;
+    }
+
+    setIsSavingOfficer(true);
+    setOfficerNotice(null);
+    try {
+      const res = await fetch("/api/admin/officers", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingOfficer.id,
+          username: editOfficerUsername.trim(),
+          password: editOfficerPassword.trim() || undefined,
+          fullName: editOfficerFullName.trim(),
+          org: editOfficerOrg.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setOfficerNotice({ success: true, msg: data.message });
+        setEditingOfficer(null);
+        await loadOfficers();
+      } else {
+        setOfficerNotice({ success: false, msg: data.message || "Lỗi khi cập nhật tài khoản cán bộ" });
+      }
+    } catch (err) {
+      setOfficerNotice({ success: false, msg: "Lỗi kết nối máy chủ khi cập nhật tài khoản" });
+    } finally {
+      setIsSavingOfficer(false);
+    }
+  };
+
+  // Tạo tài khoản cán bộ mới
+  const handleCreateOfficerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOfficerUsername.trim() || !newOfficerFullName.trim()) {
+      setOfficerNotice({ success: false, msg: "Vui lòng nhập đầy đủ Tên đăng nhập và Họ tên cán bộ" });
+      return;
+    }
+
+    setIsSavingOfficer(true);
+    setOfficerNotice(null);
+    try {
+      const res = await fetch("/api/admin/officers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: newOfficerUsername.trim(),
+          password: newOfficerPassword.trim() || "12345678@",
+          fullName: newOfficerFullName.trim(),
+          org: newOfficerOrg.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setOfficerNotice({ success: true, msg: data.message });
+        setShowAddOfficerForm(false);
+        setNewOfficerUsername("");
+        setNewOfficerFullName("");
+        await loadOfficers();
+      } else {
+        setOfficerNotice({ success: false, msg: data.message || "Lỗi khi tạo mới tài khoản cán bộ" });
+      }
+    } catch (err) {
+      setOfficerNotice({ success: false, msg: "Lỗi kết nối máy chủ khi tạo mới tài khoản" });
+    } finally {
+      setIsSavingOfficer(false);
     }
   };
 
@@ -738,6 +882,18 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Nút Quản lý tài khoản cán bộ (Chỉ Quản trị viên ADMIN toàn quyền) */}
+            {currentUser.role === "ADMIN" && (
+              <button
+                onClick={handleOpenOfficerModal}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold shadow transition cursor-pointer border border-indigo-400/50"
+                title="Quản lý tài khoản cán bộ: thay đổi tên đăng nhập và mật khẩu công vụ"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-200" />
+                <span className="hidden sm:inline">Quản lý tài khoản cán bộ</span>
+              </button>
+            )}
+
             {/* Nút Quản lý Cử tri đăng nhập */}
             <button
               onClick={handleOpenVoterModal}
@@ -2612,6 +2768,443 @@ export default function AdminDashboardPage() {
                 type="button"
                 onClick={() => setSelectedVoterDetail(null)}
                 className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg text-xs cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. MODAL QUẢN LÝ TÀI KHOẢN CÁN BỘ (ADMIN TOÀN QUYỀN ONLY) */}
+      {showOfficerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 sm:p-4 backdrop-blur-sm no-print animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-indigo-200 overflow-hidden flex flex-col max-h-[92vh]">
+            {/* Header Modal */}
+            <div className="bg-gradient-to-r from-indigo-950 via-indigo-900 to-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-indigo-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-800/80 rounded-xl border border-indigo-600/50 shadow-inner">
+                  <ShieldCheck className="w-5 h-5 text-amber-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base tracking-wide uppercase flex items-center gap-2">
+                    QUẢN LÝ TÀI KHOẢN CÁN BỘ CÔNG VỤ
+                    <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Admin Toàn Quyền
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-indigo-200 mt-0.5">
+                    Đổi tên đăng nhập, đặt lại mật khẩu và quản lý quyền "Trả lời công vụ" của các đơn vị
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowOfficerModal(false);
+                  setEditingOfficer(null);
+                  setShowAddOfficerForm(false);
+                }}
+                className="p-1.5 rounded-lg text-indigo-300 hover:text-white hover:bg-indigo-800/60 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Thân Modal */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
+              {/* Thông báo thao tác */}
+              {officerNotice && (
+                <div
+                  className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center justify-between ${
+                    officerNotice.success
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                      : "bg-red-50 border-red-300 text-red-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {officerNotice.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-red-600" />
+                    )}
+                    <span>{officerNotice.msg}</span>
+                  </div>
+                  <button
+                    onClick={() => setOfficerNotice(null)}
+                    className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* KHU VỰC CHỈNH SỬA TÀI KHOẢN CÁN BỘ ĐANG CHỌN */}
+              {editingOfficer && (
+                <div className="p-4 sm:p-5 bg-amber-50/90 border-2 border-amber-400 rounded-2xl shadow-md space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-amber-200 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Edit3 className="w-4 h-4 text-amber-800" />
+                      <h4 className="font-bold text-sm text-amber-950 uppercase">
+                        Chỉnh sửa tài khoản: {editingOfficer.fullName}
+                      </h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditingOfficer(null)}
+                      className="text-amber-800 hover:text-amber-950 text-xs font-semibold px-2 py-1 rounded bg-amber-200/60 hover:bg-amber-200 cursor-pointer transition"
+                    >
+                      Hủy bỏ
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveOfficerSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Tên hiển thị cán bộ */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Họ tên cán bộ phụ trách:
+                        </label>
+                        <input
+                          type="text"
+                          value={editOfficerFullName}
+                          onChange={(e) => setEditOfficerFullName(e.target.value)}
+                          required
+                          className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                          placeholder="Ví dụ: Cán bộ Ban Chỉ huy Công an Xã Ea Súp"
+                        />
+                      </div>
+
+                      {/* Cơ quan trực thuộc */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Cơ quan ban hành / trả lời:
+                        </label>
+                        <select
+                          value={editOfficerOrg}
+                          onChange={(e) => setEditOfficerOrg(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-hidden font-medium"
+                        >
+                          {ANSWERING_ORGS.map((org) => (
+                            <option key={org} value={org}>
+                              {org}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Tên đăng nhập mới */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Tên đăng nhập (Username):
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={editOfficerUsername}
+                            onChange={(e) => setEditOfficerUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                            required
+                            className="w-full px-3 py-2 text-xs font-mono font-bold text-indigo-900 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                            placeholder="mttq, ubnd, congan..."
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          * Tên đăng nhập viết thường, không dấu, không khoảng cách.
+                        </p>
+                      </div>
+
+                      {/* Mật khẩu mới */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Mật khẩu mới (Để trống nếu giữ nguyên mật khẩu cũ):
+                        </label>
+                        <div className="relative flex items-center">
+                          <input
+                            type={showOfficerPassword ? "text" : "password"}
+                            value={editOfficerPassword}
+                            onChange={(e) => setEditOfficerPassword(e.target.value)}
+                            className="w-full px-3 py-2 pr-16 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                            placeholder="Nhập mật khẩu mới nếu muốn đổi..."
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowOfficerPassword(!showOfficerPassword)}
+                            className="absolute right-2 px-2 py-1 text-[11px] text-slate-500 hover:text-slate-800 cursor-pointer"
+                          >
+                            {showOfficerPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditOfficerPassword("12345678@")}
+                            className="text-[10px] text-indigo-700 hover:text-indigo-900 font-bold underline cursor-pointer"
+                          >
+                            Đặt lại về mặc định (12345678@)
+                          </button>
+                          <span className="text-[10px] text-slate-500 italic">Tối thiểu 6 ký tự</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingOfficer(null)}
+                        className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold rounded-lg text-xs cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSavingOfficer}
+                        className="inline-flex items-center gap-1.5 px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg text-xs shadow-md cursor-pointer transition disabled:opacity-50"
+                      >
+                        {isSavingOfficer ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Save className="w-3.5 h-3.5" />
+                        )}
+                        <span>Lưu thay đổi tài khoản</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* KHU VỰC FORM THÊM MỚI TÀI KHOẢN CÁN BỘ */}
+              {showAddOfficerForm && (
+                <div className="p-4 sm:p-5 bg-indigo-50/80 border-2 border-indigo-300 rounded-2xl shadow-md space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-indigo-200 pb-3">
+                    <div className="flex items-center gap-2">
+                      <PlusCircle className="w-4 h-4 text-indigo-800" />
+                      <h4 className="font-bold text-sm text-indigo-950 uppercase">
+                        Thêm mới tài khoản cán bộ công vụ
+                      </h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddOfficerForm(false)}
+                      className="text-indigo-800 hover:text-indigo-950 text-xs font-semibold px-2 py-1 rounded bg-indigo-200/60 hover:bg-indigo-200 cursor-pointer transition"
+                    >
+                      Hủy bỏ
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleCreateOfficerSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Họ tên cán bộ / chức vụ:
+                        </label>
+                        <input
+                          type="text"
+                          value={newOfficerFullName}
+                          onChange={(e) => setNewOfficerFullName(e.target.value)}
+                          required
+                          className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                          placeholder="Ví dụ: Cán bộ Ban Địa chính - Nông nghiệp"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Cơ quan ban hành / trả lời:
+                        </label>
+                        <select
+                          value={newOfficerOrg}
+                          onChange={(e) => setNewOfficerOrg(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden font-medium"
+                        >
+                          {ANSWERING_ORGS.map((org) => (
+                            <option key={org} value={org}>
+                              {org}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Tên đăng nhập (Username):
+                        </label>
+                        <input
+                          type="text"
+                          value={newOfficerUsername}
+                          onChange={(e) => setNewOfficerUsername(e.target.value.toLowerCase().replace(/\s+/g, ""))}
+                          required
+                          className="w-full px-3 py-2 text-xs font-mono font-bold text-indigo-900 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                          placeholder="diachinh, motcua..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Mật khẩu đăng nhập:
+                        </label>
+                        <input
+                          type="text"
+                          value={newOfficerPassword}
+                          onChange={(e) => setNewOfficerPassword(e.target.value)}
+                          required
+                          className="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                          placeholder="12345678@"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddOfficerForm(false)}
+                        className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold rounded-lg text-xs cursor-pointer"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSavingOfficer}
+                        className="inline-flex items-center gap-1.5 px-5 py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-lg text-xs shadow-md cursor-pointer transition disabled:opacity-50"
+                      >
+                        {isSavingOfficer ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <PlusCircle className="w-3.5 h-3.5" />
+                        )}
+                        <span>Tạo tài khoản cán bộ</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* THANH TÌM KIẾM VÀ NÚT THAO TÁC */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={officerSearch}
+                    onChange={(e) => setOfficerSearch(e.target.value)}
+                    placeholder="Tìm theo tên đăng nhập, cơ quan..."
+                    className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  />
+                  {officerSearch && (
+                    <button
+                      onClick={() => setOfficerSearch("")}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  {!showAddOfficerForm && !editingOfficer && (
+                    <button
+                      onClick={() => setShowAddOfficerForm(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Thêm tài khoản mới</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={loadOfficers}
+                    className="p-2 border border-slate-200 hover:bg-slate-100 rounded-xl text-slate-600 cursor-pointer"
+                    title="Làm mới danh sách"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${officersLoading ? "animate-spin text-indigo-600" : ""}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* BẢNG DANH SÁCH TÀI KHOẢN CÁN BỘ */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+                {officersLoading ? (
+                  <div className="py-16 text-center text-slate-400 space-y-3">
+                    <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
+                    <p className="text-xs font-medium">Đang tải danh sách tài khoản cán bộ...</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider">
+                        <th className="p-3 text-center w-12">STT</th>
+                        <th className="p-3">Cơ quan & Họ tên cán bộ</th>
+                        <th className="p-3">Tên đăng nhập (Username)</th>
+                        <th className="p-3">Quyền hạn công vụ</th>
+                        <th className="p-3 text-center">Trạng thái</th>
+                        <th className="p-3 text-center">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {officers
+                        .filter((o) => {
+                          if (!officerSearch.trim()) return true;
+                          const q = officerSearch.toLowerCase();
+                          return (
+                            o.username?.toLowerCase().includes(q) ||
+                            o.fullName?.toLowerCase().includes(q) ||
+                            o.org?.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((off, idx) => (
+                          <tr key={String(off.id)} className="hover:bg-indigo-50/40 transition-colors">
+                            <td className="p-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                            <td className="p-3">
+                              <p className="font-bold text-slate-900 text-xs">{off.fullName}</p>
+                              <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                                <Building2 className="w-3 h-3 text-indigo-600 shrink-0" />
+                                <span>{off.org || "Ủy ban MTTQ Việt Nam Xã Ea Súp"}</span>
+                              </p>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-mono font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-md text-xs inline-block">
+                                {off.username}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <span className="inline-flex items-center gap-1 font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[11px]">
+                                <FileCheck className="w-3 h-3 text-emerald-600" />
+                                Quyền Trả lời
+                              </span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800">
+                                Hoạt động
+                              </span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <button
+                                onClick={() => handleStartEditOfficer(off)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold border border-amber-300 rounded-lg text-xs shadow-xs cursor-pointer transition"
+                                title="Đổi tên đăng nhập hoặc mật khẩu"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                                <span>Đổi tên / Mật khẩu</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Modal */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <p className="text-[11px] text-slate-500 italic">
+                * Cán bộ sau khi được cấp/đổi tài khoản có thể đăng nhập ngay tại <span className="font-mono font-bold text-slate-700">/admin/login</span> với mật khẩu mới.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOfficerModal(false);
+                  setEditingOfficer(null);
+                  setShowAddOfficerForm(false);
+                }}
+                className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg text-xs cursor-pointer shadow transition"
               >
                 Đóng
               </button>

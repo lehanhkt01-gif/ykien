@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
       username: user.username || username.trim(),
       fullName: user.fullName || user.name || "Cán bộ quản trị",
       role: user.role,
+      org: (user as any).org,
     });
 
     const response = NextResponse.json({
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
         username: user.username,
         fullName: user.fullName,
         role: user.role,
+        org: (user as any).org,
       },
     });
 
