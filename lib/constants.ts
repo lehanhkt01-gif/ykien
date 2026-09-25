@@ -43,10 +43,12 @@ export const STATUS_LIST = [
 
 export const ANSWERING_ORGS = [
   "Ủy ban Nhân dân xã Ea Súp",
-  "Ban Chỉ huy Công an xã Ea Súp",
-  "Ban Địa chính - Nông nghiệp - Xây dựng & Môi trường",
   "Ban Thường trực Ủy ban MTTQ Việt Nam Xã Ea Súp",
-  "Bộ phận Một cửa - Tiếp nhận & Trả kết quả xã Ea Súp",
   "Thường trực Hội đồng Nhân dân xã Ea Súp",
+  "Đảng ủy xã Ea Súp",
+  "Ban Chỉ huy Công an xã Ea Súp",
+  "Ban Chỉ huy Quân sự xã Ea Súp",
   "Trạm Y tế xã Ea Súp",
+  "Ban Địa chính - Nông nghiệp - Xây dựng & Môi trường",
+  "Bộ phận Một cửa - Tiếp nhận & Trả kết quả xã Ea Súp",
 ] as const;

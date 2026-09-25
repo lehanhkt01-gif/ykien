@@ -25,5 +25,14 @@
     "id": "user_1790265625380",
     "createdAt": "2026-09-24T16:00:25.380Z",
     "updatedAt": "2026-09-24T16:06:49.307Z"
+  },
+  {
+    "id": 4,
+    "username": "congan",
+    "passwordHash": "$2a$10$WSY2AjOIfMjCyd9WA4L9TuBVM0UefBFW0CrC9a3KKHY2KLt3t5wuC",
+    "fullName": "Cán bộ Ban Chỉ huy Công an Xã Ea Súp",
+    "role": "OFFICER",
+    "active": true,
+    "createdAt": "2026-09-25T01:47:05.436Z"
   }
 ]

@@ -39,6 +39,8 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@EaSup2026!}
+      OFFICER_DEFAULT_PASSWORD: ${OFFICER_DEFAULT_PASSWORD:-12345678@}
+      OFFICER_ACCOUNTS: ${OFFICER_ACCOUNTS:-mttq,ubnd,hdnd,danguy,congan,yte,quansu}
       PORT: 3000
     volumes:
       - ./data:/app/data

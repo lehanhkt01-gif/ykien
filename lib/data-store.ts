@@ -255,13 +255,54 @@ function getMemorySettings(): Record<string, string> {
   return globalThis.__easupSettings;
 }
 
+export const DEFAULT_OFFICER_ACCOUNTS = [
+  {
+    username: "mttq",
+    fullName: "Cán bộ Ban Thường trực MTTQ Xã Ea Súp",
+    org: "Ban Thường trực Ủy ban MTTQ Việt Nam Xã Ea Súp",
+  },
+  {
+    username: "ubnd",
+    fullName: "Cán bộ Ủy ban Nhân dân Xã Ea Súp",
+    org: "Ủy ban Nhân dân xã Ea Súp",
+  },
+  {
+    username: "hdnd",
+    fullName: "Cán bộ Thường trực Hội đồng Nhân dân Xã Ea Súp",
+    org: "Thường trực Hội đồng Nhân dân xã Ea Súp",
+  },
+  {
+    username: "danguy",
+    fullName: "Cán bộ Đảng ủy Xã Ea Súp",
+    org: "Đảng ủy xã Ea Súp",
+  },
+  {
+    username: "congan",
+    fullName: "Cán bộ Ban Chỉ huy Công an Xã Ea Súp",
+    org: "Ban Chỉ huy Công an xã Ea Súp",
+  },
+  {
+    username: "yte",
+    fullName: "Cán bộ Trạm Y tế Xã Ea Súp",
+    org: "Trạm Y tế xã Ea Súp",
+  },
+  {
+    username: "quansu",
+    fullName: "Cán bộ Ban Chỉ huy Quân sự Xã Ea Súp",
+    org: "Ban Chỉ huy Quân sự xã Ea Súp",
+  },
+];
+
 function loadUsersFromDisk(): UserType[] {
   ensureDataDir();
-  const defaultUsers: UserType[] = [
+  const officerDefaultPass = process.env.OFFICER_DEFAULT_PASSWORD || "12345678@";
+  const adminPass = process.env.ADMIN_PASSWORD || "Admin@EaSup2026!";
+
+  const baseUsers: UserType[] = [
     {
       id: 1,
       username: "admin",
-      passwordHash: bcrypt.hashSync("Admin@EaSup2026!", 10),
+      passwordHash: bcrypt.hashSync(adminPass, 10),
       fullName: "Quản Trị Viên Hệ Thống MTTQ Xã Ea Súp",
       role: "ADMIN",
       active: true,
@@ -277,15 +318,49 @@ function loadUsersFromDisk(): UserType[] {
       createdAt: new Date(),
     },
   ];
+
+  let list: UserType[] = [];
   try {
     if (fs.existsSync(USERS_FILE)) {
       const raw = fs.readFileSync(USERS_FILE, "utf-8");
-      const list = JSON.parse(raw);
-      if (Array.isArray(list) && list.length > 0) return list;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        list = parsed;
+      }
     }
   } catch (err) {}
-  saveUsersToDisk(defaultUsers);
-  return defaultUsers;
+
+  if (list.length === 0) {
+    list = [...baseUsers];
+  }
+
+  // Luôn đồng bộ 7 tài khoản cán bộ công vụ mới từ cấu hình .env
+  let maxId = list.reduce((m, u) => Math.max(m, Number(u.id) || 0), 2);
+  const officerHash = bcrypt.hashSync(officerDefaultPass, 10);
+
+  for (const officer of DEFAULT_OFFICER_ACCOUNTS) {
+    const existing = list.find((u) => u.username === officer.username);
+    if (existing) {
+      existing.fullName = officer.fullName;
+      existing.role = "OFFICER";
+      existing.active = true;
+      existing.passwordHash = officerHash;
+    } else {
+      maxId++;
+      list.push({
+        id: maxId,
+        username: officer.username,
+        passwordHash: officerHash,
+        fullName: officer.fullName,
+        role: "OFFICER",
+        active: true,
+        createdAt: new Date(),
+      });
+    }
+  }
+
+  saveUsersToDisk(list);
+  return list;
 }
 
 function saveUsersToDisk(users: UserType[]) {
@@ -655,14 +730,71 @@ export async function getFeedbackStats(isAdmin: boolean = false) {
 }
 
 export async function findUserByUsername(username: string) {
+  const cleanUsername = username.trim().toLowerCase();
+  const officerDefaultPass = process.env.OFFICER_DEFAULT_PASSWORD || "12345678@";
+
+  // Kiểm tra nếu là một trong 7 tài khoản cán bộ công vụ phụ trách trả lời
+  const officerConfig = DEFAULT_OFFICER_ACCOUNTS.find(
+    (o) => o.username.toLowerCase() === cleanUsername
+  );
+
+  if (officerConfig) {
+    const passwordHash = bcrypt.hashSync(officerDefaultPass, 10);
+    try {
+      if (await isDatabaseOnline()) {
+        const dbUser = await prisma.user.upsert({
+          where: { username: cleanUsername },
+          update: {
+            passwordHash,
+            fullName: officerConfig.fullName,
+            role: "OFFICER",
+            active: true,
+          },
+          create: {
+            username: cleanUsername,
+            passwordHash,
+            fullName: officerConfig.fullName,
+            role: "OFFICER",
+            active: true,
+          },
+        });
+        if (dbUser) return dbUser;
+      }
+    } catch (e) {}
+
+    // Fallback file/memory
+    const users = getMemoryUsers();
+    let existing = users.find((u) => u.username?.toLowerCase() === cleanUsername);
+    if (!existing) {
+      existing = {
+        id: users.length + 1,
+        username: cleanUsername,
+        passwordHash,
+        fullName: officerConfig.fullName,
+        role: "OFFICER",
+        active: true,
+        createdAt: new Date(),
+      };
+      users.push(existing);
+      saveUsersToDisk(users);
+    } else {
+      existing.passwordHash = passwordHash;
+      existing.active = true;
+      existing.role = "OFFICER";
+      saveUsersToDisk(users);
+    }
+    return existing;
+  }
+
   try {
     const user = await prisma.user.findUnique({
-      where: { username },
+      where: { username: cleanUsername },
     });
     if (user) return user;
   } catch (error) {}
+
   const users = getMemoryUsers();
-  return users.find((u) => u.username === username) || null;
+  return users.find((u) => u.username?.toLowerCase() === cleanUsername) || null;
 }
 
 export async function rateFeedback(data: {

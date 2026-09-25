@@ -332,7 +332,17 @@ export default function AdminDashboardPage() {
   // Mở modal thụ lý trả lời
   const handleOpenRespondModal = (item: FeedbackItem) => {
     setSelectedFeedback(item);
-    setAnsweringOrg(item.officialResponse?.answeringOrg || ANSWERING_ORGS[0]);
+    const orgMap: Record<string, string> = {
+      mttq: "Ban Thường trực Ủy ban MTTQ Việt Nam Xã Ea Súp",
+      ubnd: "Ủy ban Nhân dân xã Ea Súp",
+      hdnd: "Thường trực Hội đồng Nhân dân xã Ea Súp",
+      danguy: "Đảng ủy xã Ea Súp",
+      congan: "Ban Chỉ huy Công an xã Ea Súp",
+      yte: "Trạm Y tế xã Ea Súp",
+      quansu: "Ban Chỉ huy Quân sự xã Ea Súp",
+    };
+    const userOrg = currentUser?.username ? orgMap[currentUser.username.toLowerCase()] : undefined;
+    setAnsweringOrg(item.officialResponse?.answeringOrg || userOrg || ANSWERING_ORGS[0]);
     setResponseContent(item.officialResponse?.responseContent || "");
     setDocumentUrl(item.officialResponse?.documentUrl || "");
     setResponseFiles([]);
