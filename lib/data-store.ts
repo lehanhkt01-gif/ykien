@@ -724,9 +724,27 @@ export async function respondFeedback(data: {
         data: { status: "Đã trả lời" },
       });
 
+      // Đồng bộ xuống JSON file để giao diện hiển thị ngay không cần reload
+      const feedbacksDb = getMemoryFeedbacks();
+      const fbDb = feedbacksDb.find((f) => f.id === data.feedbackId);
+      if (fbDb) {
+        fbDb.status = "Đã trả lời";
+        fbDb.isApproved = true;
+        fbDb.officialResponse = {
+          id: (response as any).id || Math.floor(Math.random() * 10000) + 1,
+          feedbackId: data.feedbackId,
+          answeringOrg: data.answeringOrg,
+          responseContent: data.responseContent,
+          documentUrl: data.documentUrl || null,
+          answeredAt,
+          answeredBy: data.answeredBy,
+        };
+        saveFeedbacksToDisk(feedbacksDb);
+      }
+
       return response;
     } catch (error) {
-      // Fallback
+      // Fallback xuống JSON store
     }
   }
 
