@@ -371,10 +371,28 @@ export async function getFeedbacksList(params: {
   }
 
   if (params.status && params.status !== "Tất cả") {
-    if (params.status === "Chờ duyệt" || params.status === "Chưa duyệt") {
+    if (
+      params.status === "Chờ duyệt" ||
+      params.status === "Chưa duyệt" ||
+      params.status === "Đợi duyệt"
+    ) {
       filtered = filtered.filter(
         (f) => f.status === "Chờ duyệt" || f.status === "Chưa duyệt" || f.isApproved === false
       );
+    } else if (
+      params.status === "Đang xử lý" ||
+      params.status === "Đang xác minh, xử lý"
+    ) {
+      // Toàn bộ ý kiến đang xác minh, xử lý (đã duyệt và chưa có văn bản trả lời)
+      filtered = filtered.filter(
+        (f) =>
+          f.isApproved !== false &&
+          f.status !== "Chờ duyệt" &&
+          f.status !== "Đã trả lời" &&
+          !f.officialResponse
+      );
+    } else if (params.status === "Đã trả lời") {
+      filtered = filtered.filter((f) => f.status === "Đã trả lời" || Boolean(f.officialResponse));
     } else {
       filtered = filtered.filter((f) => f.status === params.status && f.isApproved !== false);
     }
@@ -601,35 +619,37 @@ export async function respondFeedback(data: {
 export async function getFeedbackStats(isAdmin: boolean = false) {
   const feedbacks = getMemoryFeedbacks();
 
-  if (!isAdmin) {
-    const approved = feedbacks.filter((f) => f.isApproved !== false && f.status !== "Chờ duyệt");
-    const total = approved.length;
-    const answered = approved.filter((f) => f.status === "Đã trả lời").length;
-    const processing = approved.filter((f) => f.status === "Đang xử lý").length;
-    const received = approved.filter((f) => f.status === "Đã tiếp nhận" || f.status === "Mới tiếp nhận").length;
-    const resolutionRate = total > 0 ? Math.round((answered / total) * 100) : 100;
-    return {
-      total,
-      answered,
-      processing,
-      received,
-      resolutionRate,
-    };
-  }
-
+  // 1. Tổng ý kiến tiếp nhận: số tổng bao gồm cả ý kiến đợi duyệt
   const total = feedbacks.length;
-  const pendingApproval = feedbacks.filter((f) => f.isApproved === false || f.status === "Chờ duyệt").length;
-  const answered = feedbacks.filter((f) => f.status === "Đã trả lời").length;
-  const processing = feedbacks.filter((f) => f.status === "Đang xử lý").length;
-  const received = feedbacks.filter((f) => f.status === "Đã tiếp nhận" || f.status === "Mới tiếp nhận").length;
-  const resolutionRate = total - pendingApproval > 0 ? Math.round((answered / (total - pendingApproval)) * 100) : 100;
+  // 2. Số ý kiến đợi duyệt (chưa duyệt)
+  const pendingApproval = feedbacks.filter(
+    (f) => f.isApproved === false || f.status === "Chờ duyệt"
+  ).length;
+  // 3. Đã có nội dung trả lời công khai
+  const answered = feedbacks.filter(
+    (f) => f.status === "Đã trả lời" || Boolean(f.officialResponse)
+  ).length;
+  // 4. Toàn bộ ý kiến đang xác minh, xử lý (đã duyệt và chưa có văn bản trả lời)
+  const processing = feedbacks.filter(
+    (f) =>
+      f.isApproved !== false &&
+      f.status !== "Chờ duyệt" &&
+      f.status !== "Đã trả lời" &&
+      !f.officialResponse
+  ).length;
+  // Ô thứ 2 biểu thị số ý kiến đợi duyệt
+  const received = pendingApproval;
+  const resolutionRate =
+    total - pendingApproval > 0
+      ? Math.round((answered / (total - pendingApproval)) * 100)
+      : 0;
 
   return {
     total,
     pendingApproval,
-    answered,
-    processing,
     received,
+    processing,
+    answered,
     resolutionRate,
   };
 }

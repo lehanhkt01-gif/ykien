@@ -321,10 +321,12 @@ export default function AdminDashboardPage() {
     }
   }, [currentUser, selectedVillage, selectedCategory, selectedStatus]);
 
-  // Đăng xuất
+  // Đăng xuất cán bộ: chuyển về trang chủ vai trò là khách
   const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/admin/login");
+    try {
+      await fetch("/api/admin/logout", { method: "POST" });
+    } catch (e) {}
+    window.location.href = "/";
   };
 
   // Mở modal thụ lý trả lời
@@ -844,16 +846,58 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* 3. Cần thụ lý giải quyết */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          {/* 3. Đang xác minh, xử lý */}
+          <div
+            onClick={() =>
+              setSelectedStatus(
+                selectedStatus === "Đang xác minh, xử lý" ? "Tất cả" : "Đang xác minh, xử lý"
+              )
+            }
+            className={`cursor-pointer p-4 rounded-xl border transition shadow-sm flex items-center justify-between ${
+              selectedStatus === "Đang xác minh, xử lý"
+                ? "bg-amber-500 text-white border-amber-600 ring-2 ring-amber-300 shadow-md"
+                : "bg-white hover:border-amber-400 border-slate-200"
+            }`}
+            title="Nhấn để xem toàn bộ ý kiến đang xác minh, xử lý"
+          >
             <div>
-              <p className="text-xs font-bold text-sky-700 uppercase">Cần thụ lý giải quyết</p>
-              <p className="text-2xl font-black text-sky-700 mt-0.5">
-                {items.filter((i) => i.status !== "Đã trả lời" && i.isApproved !== false && i.status !== "Chờ duyệt").length}
+              <p
+                className={`text-xs font-bold uppercase ${
+                  selectedStatus === "Đang xác minh, xử lý" ? "text-amber-100" : "text-amber-800"
+                }`}
+              >
+                Đang xác minh, xử lý
               </p>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Đã duyệt, đang chờ văn bản trả lời</p>
+              <p
+                className={`text-2xl font-black mt-0.5 ${
+                  selectedStatus === "Đang xác minh, xử lý" ? "text-white" : "text-amber-700"
+                }`}
+              >
+                {
+                  items.filter(
+                    (i) =>
+                      i.status !== "Đã trả lời" &&
+                      !i.officialResponse &&
+                      i.isApproved !== false &&
+                      i.status !== "Chờ duyệt"
+                  ).length
+                }
+              </p>
+              <p
+                className={`text-[10px] mt-0.5 font-medium ${
+                  selectedStatus === "Đang xác minh, xử lý" ? "text-amber-100" : "text-slate-400"
+                }`}
+              >
+                Toàn bộ ý kiến đang xác minh, xử lý
+              </p>
             </div>
-            <div className="w-11 h-11 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center">
+            <div
+              className={`w-11 h-11 rounded-lg flex items-center justify-center ${
+                selectedStatus === "Đang xác minh, xử lý"
+                  ? "bg-white/20 text-white"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
               <Clock className="w-5 h-5" />
             </div>
           </div>
@@ -1160,17 +1204,13 @@ export default function AdminDashboardPage() {
                               {approvingId === item.id ? "Đang duyệt..." : "Duyệt"}
                             </button>
                           </div>
-                        ) : item.status === "Đã trả lời" ? (
+                        ) : item.status === "Đã trả lời" || Boolean(item.officialResponse) ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
                             Đã trả lời
                           </span>
-                        ) : item.status === "Đang xử lý" ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">
-                            Đang xử lý
-                          </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800 border border-blue-300">
-                            Mới tiếp nhận
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                            Đang xác minh, xử lý
                           </span>
                         )}
                       </td>

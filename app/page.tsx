@@ -65,6 +65,7 @@ interface FeedbackItem {
   category: string;
   content: string;
   status: string;
+  isApproved?: boolean;
   createdAt: string;
   ratingVerySatisfied?: number;
   ratingSatisfied?: number;
@@ -78,6 +79,7 @@ interface StatsData {
   answered: number;
   processing: number;
   received: number;
+  pendingApproval?: number;
   resolutionRate: number;
 }
 
@@ -88,6 +90,7 @@ export default function HomePage() {
     answered: 0,
     processing: 0,
     received: 0,
+    pendingApproval: 0,
     resolutionRate: 100,
   });
   const [loading, setLoading] = useState(true);
@@ -634,57 +637,57 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Card 2: Đã tiếp nhận */}
+            {/* Card 2: Đợi duyệt (Thay thế cho Đã tiếp nhận) */}
             <div
               onClick={() => {
-                setSelectedStatus("Đã tiếp nhận");
+                setSelectedStatus("Đợi duyệt");
                 setPage(1);
               }}
-              title="Bấm để lọc danh sách hồ sơ Đã tiếp nhận"
+              title="Bấm để xem số hồ sơ ý kiến cử tri đợi duyệt"
               className={`rounded-lg px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between border shadow-xs cursor-pointer transition ${
-                selectedStatus === "Đã tiếp nhận"
-                  ? "bg-blue-100/70 border-blue-400 ring-2 ring-blue-600/20"
-                  : "bg-blue-50/50 border-blue-200/80 hover:bg-blue-100/50"
-              }`}
-            >
-              <div>
-                <p className="text-[11px] font-bold text-blue-800 uppercase tracking-wide">
-                  Đã tiếp nhận
-                </p>
-                <p className="text-xl sm:text-2xl font-black text-blue-700 leading-none mt-1">
-                  {stats.received}
-                </p>
-                <p className="text-[11px] text-blue-600 mt-1">Hồ sơ chờ phân công</p>
-              </div>
-              <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
-                <Inbox className="w-4.5 h-4.5" />
-              </div>
-            </div>
-
-            {/* Card 3: Đang xử lý */}
-            <div
-              onClick={() => {
-                setSelectedStatus("Đang xử lý");
-                setPage(1);
-              }}
-              title="Bấm để lọc danh sách hồ sơ Đang xử lý"
-              className={`rounded-lg px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between border shadow-xs cursor-pointer transition ${
-                selectedStatus === "Đang xử lý"
+                selectedStatus === "Đợi duyệt" || selectedStatus === "Chờ duyệt"
                   ? "bg-amber-100/70 border-amber-400 ring-2 ring-amber-600/20"
                   : "bg-amber-50/50 border-amber-200/80 hover:bg-amber-100/50"
               }`}
             >
               <div>
                 <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wide">
-                  Đang xác minh, xử lý
+                  Đợi duyệt
                 </p>
                 <p className="text-xl sm:text-2xl font-black text-amber-700 leading-none mt-1">
-                  {stats.processing}
+                  {stats.pendingApproval ?? stats.received ?? 0}
                 </p>
-                <p className="text-[11px] text-amber-600 mt-1">Đang được thụ lý</p>
+                <p className="text-[11px] text-amber-600 mt-1">Hồ sơ chờ phê duyệt</p>
               </div>
               <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
                 <Clock className="w-4.5 h-4.5" />
+              </div>
+            </div>
+
+            {/* Card 3: Đang xác minh, xử lý (Toàn bộ ý kiến đang xác minh, xử lý) */}
+            <div
+              onClick={() => {
+                setSelectedStatus("Đang xác minh, xử lý");
+                setPage(1);
+              }}
+              title="Bấm để lọc toàn bộ danh sách hồ sơ đang xác minh, xử lý"
+              className={`rounded-lg px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between border shadow-xs cursor-pointer transition ${
+                selectedStatus === "Đang xác minh, xử lý" || selectedStatus === "Đang xử lý"
+                  ? "bg-blue-100/70 border-blue-400 ring-2 ring-blue-600/20"
+                  : "bg-blue-50/50 border-blue-200/80 hover:bg-blue-100/50"
+              }`}
+            >
+              <div>
+                <p className="text-[11px] font-bold text-blue-800 uppercase tracking-wide">
+                  Đang xác minh, xử lý
+                </p>
+                <p className="text-xl sm:text-2xl font-black text-blue-700 leading-none mt-1">
+                  {stats.processing}
+                </p>
+                <p className="text-[11px] text-blue-600 mt-1">Toàn bộ ý kiến đang thụ lý</p>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
+                <Inbox className="w-4.5 h-4.5" />
               </div>
             </div>
 
@@ -736,9 +739,7 @@ export default function HomePage() {
                   const count =
                     st === "Tất cả"
                       ? stats.total
-                      : st === "Đã tiếp nhận"
-                      ? stats.received
-                      : st === "Đang xử lý"
+                      : st === "Đang xác minh, xử lý"
                       ? stats.processing
                       : st === "Đã trả lời"
                       ? stats.answered
@@ -981,7 +982,7 @@ export default function HomePage() {
                             )}
                           </td>
 
-                          {/* 6. Trả lời - Chỉ có trường hợp 'Đã trả lời' mới có nội dung xem trả lời, còn lại ghi tương tự theo trạng thái */}
+                          {/* 6. Trả lời - Nếu chưa cập nhật nội dung trả lời thì để mặc định là 'Đang xác minh, xử lý', trừ trường hợp đợi duyệt và đã có nội dung trả lời */}
                           <td className="py-3 px-3 text-center">
                             {isAnswered && item.officialResponse ? (
                               <button
@@ -992,15 +993,15 @@ export default function HomePage() {
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                 Xem trả lời
                               </button>
-                            ) : item.status === "Đang xử lý" ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300">
-                                <Clock className="w-3 h-3 text-amber-600" />
-                                Đang xử lý
+                            ) : item.status === "Chờ duyệt" || item.isApproved === false ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 border border-amber-300">
+                                <Clock className="w-3 h-3 text-amber-700" />
+                                Đợi duyệt
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-300">
-                                <Inbox className="w-3 h-3 text-blue-600" />
-                                Đã tiếp nhận
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                                <Clock className="w-3 h-3 text-blue-600" />
+                                Đang xác minh, xử lý
                               </span>
                             )}
                           </td>

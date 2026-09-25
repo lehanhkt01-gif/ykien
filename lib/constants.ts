@@ -37,8 +37,7 @@ export const CATEGORIES = [
 
 export const STATUS_LIST = [
   "Tất cả",
-  "Đã tiếp nhận",
-  "Đang xử lý",
+  "Đang xác minh, xử lý",
   "Đã trả lời",
 ] as const;
 
