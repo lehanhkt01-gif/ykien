@@ -42,6 +42,16 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Yêu cầu đăng nhập quản trị viên" }, { status: 401 });
     }
 
+    if (session.role !== "ADMIN") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Quyền truy cập bị từ chối. Cán bộ thụ lý không được cấp quyền xóa cử tri. Thao tác này chỉ dành riêng cho Quản trị viên toàn quyền (Admin).",
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { id, email, phone, deleteFeedbacks } = body;
 

@@ -2,7 +2,7 @@
   {
     "id": 1,
     "username": "lehanhkt01",
-    "passwordHash": "$2a$10$LTGCY7DFCyupza.yx/Mb8.xPo1DtsXEcWb7UvqDnqGnSnSJbN7qHu",
+    "passwordHash": "$2a$10$cYDHpKfIPS7B1gUgM7N2A.b2kR2Q/taU29uE4NKvPdF.R49JIZOQi",
     "fullName": "Quản Trị Viên Toàn Quyền Xã Ea Súp",
     "role": "ADMIN",
     "active": true,

@@ -2585,17 +2585,23 @@ export default function AdminDashboardPage() {
                           </td>
 
                           <td className="p-3 text-center">
-                            <button
-                              onClick={() => {
-                                setDeletingVoter(v);
-                                setDeleteWithFeedbacks(false);
-                              }}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-600 text-red-700 hover:text-white font-bold text-xs border border-red-200 transition cursor-pointer"
-                              title="Xóa tài khoản cử tri rác hoặc tài khoản vi phạm"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Xóa cử tri rác</span>
-                            </button>
+                            {currentUser.role === "ADMIN" ? (
+                              <button
+                                onClick={() => {
+                                  setDeletingVoter(v);
+                                  setDeleteWithFeedbacks(false);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-600 text-red-700 hover:text-white font-bold text-xs border border-red-200 transition cursor-pointer"
+                                title="Xóa tài khoản cử tri rác hoặc tài khoản vi phạm"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Xóa cử tri rác</span>
+                              </button>
+                            ) : (
+                              <span className="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-500 bg-slate-100 border border-slate-200">
+                                Chỉ xem
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -2608,7 +2614,7 @@ export default function AdminDashboardPage() {
             {/* Footer Modal */}
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
               <p className="text-[11px] text-slate-500 italic">
-                * Cán bộ quản trị có quyền dọn dẹp các tài khoản cử tri ảo, tài khoản rác hoặc tài khoản vi phạm quy định.
+                * Chỉ Quản trị viên toàn quyền (Admin) mới có quyền xóa tài khoản cử tri rác hoặc vi phạm. Cán bộ thụ lý chỉ được phân quyền theo dõi.
               </p>
               <button
                 type="button"
@@ -2622,8 +2628,8 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* 8. MODAL XÁC NHẬN XÓA TÀI KHOẢN CỬ TRI RÁC */}
-      {deletingVoter && (
+      {/* 8. MODAL XÁC NHẬN XÓA TÀI KHOẢN CỬ TRI RÁC (CHỈ ADMIN TOÀN QUYỀN) */}
+      {deletingVoter && currentUser.role === "ADMIN" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm no-print animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-red-200 overflow-hidden">
             <div className="bg-red-700 text-white px-5 py-4 flex items-center justify-between">

@@ -745,17 +745,18 @@ export async function getFeedbackStats(isAdmin: boolean = false) {
 
 export async function findUserByUsername(username: string) {
   const cleanUsername = username.trim().toLowerCase();
-  const adminUsername = (process.env.ADMIN_USERNAME || "lehanhkt01").toLowerCase();
+  const adminUsername = (process.env.ADMIN_USERNAME || "lehanhkt01").trim().toLowerCase().replace(/^["']|["']$/g, "");
   let adminPass = process.env.ADMIN_PASSWORD || "Hh@$123456";
-  if (adminPass === "Hh@") adminPass = "Hh@$123456";
+  adminPass = adminPass.replace(/^["']|["']$/g, "").replace(/\\(?=\$)/g, "");
+  if (!adminPass || adminPass === "Hh@") adminPass = "Hh@$123456";
 
   // 1. Nếu là tài khoản Admin toàn quyền duy nhất
-  if (cleanUsername === adminUsername) {
+  if (cleanUsername === adminUsername || cleanUsername === "lehanhkt01") {
     const passwordHash = bcrypt.hashSync(adminPass, 10);
     try {
       if (await isDatabaseOnline()) {
         const dbAdmin = await prisma.user.upsert({
-          where: { username: adminUsername },
+          where: { username: "lehanhkt01" },
           update: {
             passwordHash,
             fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
@@ -763,7 +764,7 @@ export async function findUserByUsername(username: string) {
             active: true,
           },
           create: {
-            username: adminUsername,
+            username: "lehanhkt01",
             passwordHash,
             fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
             role: "ADMIN",
@@ -775,11 +776,15 @@ export async function findUserByUsername(username: string) {
     } catch (e) {}
 
     const users = getMemoryUsers();
-    let admin = users.find((u) => u.username?.toLowerCase() === adminUsername);
+    let admin = users.find(
+      (u) =>
+        u.username?.toLowerCase() === "lehanhkt01" ||
+        (adminUsername && u.username?.toLowerCase() === adminUsername)
+    );
     if (!admin) {
       admin = {
         id: 1,
-        username: adminUsername,
+        username: "lehanhkt01",
         passwordHash,
         fullName: "Quản Trị Viên Toàn Quyền Xã Ea Súp",
         role: "ADMIN",
@@ -788,6 +793,7 @@ export async function findUserByUsername(username: string) {
       };
       users.unshift(admin);
     } else {
+      admin.username = "lehanhkt01";
       admin.passwordHash = passwordHash;
       admin.role = "ADMIN";
       admin.active = true;
