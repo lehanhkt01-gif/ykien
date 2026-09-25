@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { initialFeedbacks } from "../prisma/seed-data";
+import { ensureDatabaseSchema } from "./db-init";
 import fs from "fs";
 import path from "path";
 
@@ -164,21 +165,26 @@ export function loadFeedbacksFromDisk(): VoterFeedbackType[] {
 
 export function saveFeedbacksToDisk(feedbacks: VoterFeedbackType[]) {
   ensureDataDir();
+  globalThis.__easupFeedbacks = feedbacks;
   try {
-    globalThis.__easupFeedbacks = feedbacks;
     fs.writeFileSync(FEEDBACKS_FILE, JSON.stringify(feedbacks, null, 2), "utf-8");
   } catch (err) {
-    console.error("Lỗi ghi file feedbacks.json:", err);
+    try {
+      fs.chmodSync(FEEDBACKS_FILE, 0o666);
+      fs.writeFileSync(FEEDBACKS_FILE, JSON.stringify(feedbacks, null, 2), "utf-8");
+    } catch (e) {
+      console.error("Lỗi ghi file feedbacks.json:", err);
+    }
   }
 }
 
 export function getMemoryFeedbacks(): VoterFeedbackType[] {
-  // Luôn đọc từ file để đảm bảo dữ liệu mới nhất đồng bộ tức thì
+  // Đọc từ file nếu file tồn tại
   try {
     if (fs.existsSync(FEEDBACKS_FILE)) {
       const raw = fs.readFileSync(FEEDBACKS_FILE, "utf-8");
       const list = JSON.parse(raw);
-      if (Array.isArray(list)) {
+      if (Array.isArray(list) && list.length > 0) {
         // Chuẩn hóa: Chỉ có ý kiến cử tri tự gửi (status === 'Chờ duyệt' hoặc isApproved === false) mới cần duyệt.
         // Hồ sơ do cán bộ nhập (Excel, thêm trực tiếp) hoặc dữ liệu cũ thì isApproved = true (không cần duyệt).
         const normalized: VoterFeedbackType[] = list.map((item: any) => {
@@ -405,9 +411,13 @@ export async function isDatabaseOnline(): Promise<boolean> {
   try {
     const testPromise = prisma.$queryRaw`SELECT 1`;
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("DB Timeout")), 800)
+      setTimeout(() => reject(new Error("DB Timeout")), 1200)
     );
     await Promise.race([testPromise, timeoutPromise]);
+
+    // Tự động kiểm tra schema và khởi tạo bảng PostgreSQL nếu chưa có
+    await ensureDatabaseSchema();
+
     isDbAvailable = true;
   } catch (e) {
     isDbAvailable = false;
@@ -477,6 +487,91 @@ export async function getFeedbacksList(params: {
   const page = Math.max(1, Number(params.page) || 1);
   const limit = Math.max(1, Number(params.limit) || 10);
   const skip = (page - 1) * limit;
+
+  // Nếu CSDL PostgreSQL online, đọc trực tiếp từ PostgreSQL để đảm bảo dữ liệu mới nhất
+  if (await isDatabaseOnline()) {
+    try {
+      const where: any = {};
+
+      if (!params.isAdmin) {
+        where.status = { not: "Chờ duyệt" };
+      }
+
+      if (params.search) {
+        const s = params.search.trim();
+        where.OR = [
+          { ticketCode: { contains: s, mode: "insensitive" } },
+          { voterName: { contains: s, mode: "insensitive" } },
+          { content: { contains: s, mode: "insensitive" } },
+          { phone: { contains: s } },
+        ];
+      }
+
+      if (params.village && params.village !== "Tất cả") {
+        where.village = params.village;
+      }
+
+      if (params.status && params.status !== "Tất cả") {
+        if (params.status === "Chờ duyệt" || params.status === "Chưa duyệt") {
+          where.status = "Chờ duyệt";
+        } else if (params.status === "Đang xác minh, xử lý" || params.status === "Đang xử lý") {
+          where.status = { notIn: ["Chờ duyệt", "Đã trả lời"] };
+          where.officialResponse = null;
+        } else if (params.status === "Đã trả lời") {
+          where.OR = [
+            { status: "Đã trả lời" },
+            { officialResponse: { isNot: null } },
+          ];
+        } else {
+          where.status = params.status;
+        }
+      }
+
+      if (params.fromDate) {
+        where.createdAt = { ...(where.createdAt || {}), gte: new Date(params.fromDate) };
+      }
+      if (params.toDate) {
+        where.createdAt = { ...(where.createdAt || {}), lte: new Date(params.toDate) };
+      }
+
+      const [total, items] = await Promise.all([
+        prisma.voterFeedback.count({ where }),
+        prisma.voterFeedback.findMany({
+          where,
+          include: { officialResponse: true },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+      ]);
+
+      if (total > 0 || (items && items.length > 0)) {
+        return {
+          items: items.map((f: any) => ({
+            ...f,
+            isApproved: f.status !== "Chờ duyệt",
+            officialResponse: f.officialResponse
+              ? {
+                  id: f.officialResponse.id,
+                  feedbackId: f.id,
+                  answeringOrg: f.officialResponse.answeringOrg,
+                  responseContent: f.officialResponse.responseContent,
+                  documentUrl: f.officialResponse.documentUrl,
+                  answeredAt: f.officialResponse.answeredAt,
+                  answeredBy: f.officialResponse.answeredBy,
+                }
+              : null,
+          })),
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        };
+      }
+    } catch (dbErr) {
+      console.error("Lỗi truy vấn CSDL, chuyển fallback JSON:", dbErr);
+    }
+  }
 
   // Fallback sang persistent file store
   const feedbacks = getMemoryFeedbacks();
@@ -708,10 +803,39 @@ export async function respondFeedback(data: {
       (data.ticketCode && f.ticketCode === data.ticketCode)
   );
 
-  const realFeedbackId = feedback ? Number(feedback.id) : numId;
+  let realFeedbackId = feedback ? Number(feedback.id) : numId;
 
   if (await isDatabaseOnline()) {
     try {
+      // Tìm id trong PostgreSQL nếu id số trong JSON khác PostgreSQL
+      let dbFeedback = null;
+      if (!isNaN(numId) && numId > 0) {
+        dbFeedback = await prisma.voterFeedback.findUnique({ where: { id: numId } });
+      }
+      if (!dbFeedback && (data.ticketCode || feedback?.ticketCode)) {
+        const code = data.ticketCode || feedback?.ticketCode;
+        dbFeedback = await prisma.voterFeedback.findUnique({ where: { ticketCode: code } });
+      }
+
+      if (dbFeedback) {
+        realFeedbackId = dbFeedback.id;
+      } else if (feedback) {
+        // Nếu trong PostgreSQL chưa có bản ghi này, tự động tạo mới vào PostgreSQL
+        const newDb = await prisma.voterFeedback.create({
+          data: {
+            ticketCode: feedback.ticketCode,
+            voterName: feedback.voterName,
+            phone: feedback.phone || null,
+            village: feedback.village,
+            category: feedback.category,
+            content: feedback.content,
+            status: "Đã trả lời",
+            createdAt: new Date(feedback.createdAt),
+          },
+        });
+        realFeedbackId = newDb.id;
+      }
+
       const response = await prisma.officialResponse.upsert({
         where: { feedbackId: realFeedbackId },
         create: {

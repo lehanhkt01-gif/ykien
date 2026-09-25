@@ -37,18 +37,16 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy static assets and standalone server
+# Copy static assets, prisma, initial data and standalone server
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/data ./data
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Tạo thư mục uploads và data với đúng quyền trước khi switch user
+# Tạo thư mục uploads và data với quyền ghi toàn quyền
 RUN mkdir -p ./public/uploads ./data && \
-    chown -R nextjs:nodejs ./public/uploads ./data && \
-    chmod -R 755 ./public/uploads ./data
-
-USER nextjs
+    chmod -R 777 ./public/uploads ./data
 
 EXPOSE 3000
 

@@ -26,6 +26,7 @@ services:
       dockerfile: Dockerfile
     container_name: easup_web_app
     restart: unless-stopped
+    user: "root"
     env_file:
       - .env
     environment:
