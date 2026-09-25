@@ -416,6 +416,53 @@ export async function isDatabaseOnline(): Promise<boolean> {
   return isDbAvailable;
 }
 
+export const CATEGORY_ALIASES: Record<string, string> = {
+  "Đất đai, bồi thường & giải tỏa mặt bằng": "Tài nguyên, đất đai, cấp GCNQSDĐ và quản lý đất công",
+  "Đường giao thông nông thôn, kênh mương thủy lợi": "Giao thông, hạ tầng kỹ thuật",
+  "Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt": "Môi trường, thu gom rác thải và vệ sinh công cộng",
+  "An ninh trật tự thôn xóm, phòng chống tệ nạn": "Nông nghiệp, an ninh trật tự và quản lý nhà nước sau sáp nhập",
+  "Chế độ chính sách, hỗ trợ hộ nghèo, đại đoàn kết": "Chế độ, chính sách, an sinh xã hội và tổ chức hội quần chúng",
+  "Tinh thần phục vụ & Thủ tục hành chính": "Lĩnh vực khác",
+};
+
+export function matchCategory(itemCat?: string | null, filterCat?: string | null): boolean {
+  if (!filterCat || filterCat === "Tất cả") return true;
+  if (!itemCat) return false;
+  if (itemCat === filterCat) return true;
+
+  const normItem = itemCat.toLowerCase().trim();
+  const normFilter = filterCat.toLowerCase().trim();
+  if (normItem === normFilter) return true;
+
+  // Đối chiếu bí danh (alias)
+  const aliasFilter = (CATEGORY_ALIASES[filterCat] || filterCat).toLowerCase().trim();
+  const aliasItem = (CATEGORY_ALIASES[itemCat] || itemCat).toLowerCase().trim();
+  if (aliasFilter === aliasItem || aliasFilter === normItem || aliasItem === normFilter) return true;
+
+  // Đối chiếu từ khóa cốt lõi để đảm bảo bộ lọc luôn tìm chính xác dữ liệu
+  const isLand = (s: string) => s.includes("đất") || s.includes("tài nguyên") || s.includes("gcnqsdđ") || s.includes("bồi thường");
+  const isTraffic = (s: string) => s.includes("giao thông") || s.includes("đường");
+  const isIrrigation = (s: string) => s.includes("thủy lợi") || s.includes("kênh mương") || s.includes("thoát nước") || s.includes("tưới tiêu");
+  const isEnv = (s: string) => s.includes("môi trường") || s.includes("rác") || s.includes("vệ sinh");
+  const isSocial = (s: string) => s.includes("chính sách") || s.includes("an sinh") || s.includes("hộ nghèo");
+  const isElectric = (s: string) => s.includes("điện") || s.includes("chiếu sáng");
+  const isAgriSecurity = (s: string) => s.includes("nông nghiệp") || s.includes("an ninh");
+  const isPublicAsset = (s: string) => s.includes("tài sản công") || s.includes("nhà văn hóa");
+  const isEdu = (s: string) => s.includes("giáo dục") || s.includes("trường");
+
+  if (isLand(normFilter) && isLand(normItem)) return true;
+  if (isTraffic(normFilter) && isTraffic(normItem)) return true;
+  if (isIrrigation(normFilter) && isIrrigation(normItem)) return true;
+  if (isEnv(normFilter) && isEnv(normItem)) return true;
+  if (isSocial(normFilter) && isSocial(normItem)) return true;
+  if (isElectric(normFilter) && isElectric(normItem)) return true;
+  if (isAgriSecurity(normFilter) && isAgriSecurity(normItem)) return true;
+  if (isPublicAsset(normFilter) && isPublicAsset(normItem)) return true;
+  if (isEdu(normFilter) && isEdu(normItem)) return true;
+
+  return false;
+}
+
 export async function getFeedbacksList(params: {
   page?: number;
   limit?: number;
@@ -456,7 +503,7 @@ export async function getFeedbacksList(params: {
   }
 
   if (params.category && params.category !== "Tất cả") {
-    filtered = filtered.filter((f) => f.category === params.category);
+    filtered = filtered.filter((f) => matchCategory(f.category, params.category));
   }
 
   if (params.status && params.status !== "Tất cả") {

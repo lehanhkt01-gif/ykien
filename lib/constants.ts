@@ -26,12 +26,15 @@ export const VILLAGES = [
 ] as const;
 
 export const CATEGORIES = [
-  "Đất đai, bồi thường & giải tỏa mặt bằng",
-  "Đường giao thông nông thôn, kênh mương thủy lợi",
-  "Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt",
-  "An ninh trật tự thôn xóm, phòng chống tệ nạn",
-  "Chế độ chính sách, hỗ trợ hộ nghèo, đại đoàn kết",
-  "Tinh thần phục vụ & Thủ tục hành chính",
+  "Tài nguyên, đất đai, cấp GCNQSDĐ và quản lý đất công",
+  "Giao thông, hạ tầng kỹ thuật",
+  "Thủy lợi, tưới tiêu, thoát nước và phòng chống ngập lụt",
+  "Môi trường, thu gom rác thải và vệ sinh công cộng",
+  "Chế độ, chính sách, an sinh xã hội và tổ chức hội quần chúng",
+  "Điện, điện chiếu sáng và an toàn điện",
+  "Nông nghiệp, an ninh trật tự và quản lý nhà nước sau sáp nhập",
+  "Tài sản công, nhà văn hóa và cơ sở vật chất sau sáp nhập",
+  "Giáo dục và trường lớp",
   "Lĩnh vực khác",
 ] as const;
 
