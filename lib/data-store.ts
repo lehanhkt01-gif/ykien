@@ -639,7 +639,7 @@ export async function createFeedback(data: {
 
 export async function approveFeedback(id: number) {
   const feedbacks = getMemoryFeedbacks();
-  const item = feedbacks.find((f) => f.id === id);
+  const item = feedbacks.find((f) => Number(f.id) === Number(id));
   if (!item) throw new Error("Không tìm thấy hồ sơ ý kiến");
 
   item.isApproved = true;
@@ -726,7 +726,7 @@ export async function respondFeedback(data: {
 
       // Đồng bộ xuống JSON file để giao diện hiển thị ngay không cần reload
       const feedbacksDb = getMemoryFeedbacks();
-      const fbDb = feedbacksDb.find((f) => f.id === data.feedbackId);
+      const fbDb = feedbacksDb.find((f) => Number(f.id) === Number(data.feedbackId));
       if (fbDb) {
         fbDb.status = "Đã trả lời";
         fbDb.isApproved = true;
@@ -750,7 +750,7 @@ export async function respondFeedback(data: {
 
   // Fallback in-memory & file JSON store
   const feedbacks = getMemoryFeedbacks();
-  const feedback = feedbacks.find((f) => f.id === data.feedbackId);
+  const feedback = feedbacks.find((f) => Number(f.id) === Number(data.feedbackId));
   if (!feedback) throw new Error("Không tìm thấy ý kiến cử tri");
 
   const resp: OfficialResponseType = {
