@@ -34,6 +34,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-easup_voter_feedback_jwt_secret_super_key_2026_production}
       AUTH_SECRET: ${AUTH_SECRET:-easup_auth_secret_random_string_key_2026_change_me}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://ykien.easupso.com}
+      AUTH_TRUST_HOST: "true"
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
