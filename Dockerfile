@@ -43,6 +43,11 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Tạo thư mục uploads và data với đúng quyền trước khi switch user
+RUN mkdir -p ./public/uploads ./data && \
+    chown -R nextjs:nodejs ./public/uploads ./data && \
+    chmod -R 755 ./public/uploads ./data
+
 USER nextjs
 
 EXPOSE 3000
