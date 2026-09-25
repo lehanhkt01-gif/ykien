@@ -37,7 +37,20 @@ async function main() {
 
   console.log(`Đã tạo người dùng: ${admin.username}, ${officer.username}`);
 
-  // 2. Nạp dữ liệu các ý kiến cử tri và văn bản trả lời
+  // 2. Dọn dẹp các ý kiến test cũ khỏi CSDL
+  const testCodes = [
+    "EASUP-PA-892415",
+    "EASUP-PA-671239",
+    "EASUP-PA-452108",
+    "EASUP-PA-319874",
+    "EASUP-PA-208915",
+    "EASUP-PA-110293",
+  ];
+  await prisma.voterFeedback.deleteMany({
+    where: { ticketCode: { in: testCodes } },
+  });
+
+  // 3. Nạp dữ liệu các ý kiến cử tri và văn bản trả lời (nếu có trong seed-data)
   for (const item of initialFeedbacks) {
     const feedback = await prisma.voterFeedback.upsert({
       where: { ticketCode: item.ticketCode },

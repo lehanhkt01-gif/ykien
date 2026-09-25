@@ -96,6 +96,15 @@ declare global {
   var __easupUsers: UserType[] | undefined;
 }
 
+const TEST_TICKET_CODES = [
+  "EASUP-PA-892415",
+  "EASUP-PA-671239",
+  "EASUP-PA-452108",
+  "EASUP-PA-319874",
+  "EASUP-PA-208915",
+  "EASUP-PA-110293",
+];
+
 export function loadFeedbacksFromDisk(): VoterFeedbackType[] {
   ensureDataDir();
   try {
@@ -103,7 +112,16 @@ export function loadFeedbacksFromDisk(): VoterFeedbackType[] {
       const raw = fs.readFileSync(FEEDBACKS_FILE, "utf-8");
       const list = JSON.parse(raw);
       if (Array.isArray(list) && list.length > 0) {
-        return list;
+        // Tự động loại bỏ 6 ý kiến mẫu test nếu còn sót lại
+        const cleaned = list.filter(
+          (f) => !TEST_TICKET_CODES.includes(f.ticketCode) && ![1, 2, 3, 4, 5, 6].includes(f.id)
+        );
+        if (cleaned.length !== list.length) {
+          try {
+            fs.writeFileSync(FEEDBACKS_FILE, JSON.stringify(cleaned, null, 2), "utf-8");
+          } catch (e) {}
+        }
+        return cleaned;
       }
     }
   } catch (err) {

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Lock, User, ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Lock, User, ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -136,13 +136,6 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-500 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                Mã hóa JWT & Bcrypt 256-bit
-              </span>
-              <span className="text-amber-700 font-medium">Hỗ trợ Bitwarden (Ctrl+Shift+L)</span>
-            </div>
 
             <button
               type="submit"
