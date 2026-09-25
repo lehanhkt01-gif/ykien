@@ -13,24 +13,42 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { feedbackId, answeringOrg, responseContent, documentUrl } = body;
+    const { feedbackId, ticketCode, answeringOrg, responseContent, documentUrl } = body;
 
-    if (!feedbackId || !answeringOrg || !responseContent || responseContent.trim().length < 5) {
+    if (!feedbackId || !answeringOrg) {
       return NextResponse.json(
         {
           success: false,
-          message: "Vui lòng chọn cơ quan trả lời và nhập nội dung giải quyết chi tiết",
+          message: "Vui lòng chọn cơ quan ban hành trả lời",
         },
         { status: 400 }
       );
     }
 
+    let finalContent = responseContent ? responseContent.trim() : "";
+    const hasDoc = Boolean(documentUrl && documentUrl.trim().length > 0);
+
+    if (!finalContent || finalContent.length < 2) {
+      if (hasDoc) {
+        finalContent = "Cơ quan có thẩm quyền đã ban hành văn bản giải quyết chính thức (chi tiết vui lòng xem tệp tài liệu, văn bản có dấu đỏ đính kèm bên dưới).";
+      } else {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Vui lòng nhập nội dung văn bản giải quyết chi tiết hoặc đính kèm tệp văn bản / hình ảnh có dấu đỏ",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const response = await respondFeedback({
       feedbackId: Number(feedbackId),
+      ticketCode: ticketCode ? String(ticketCode).trim() : undefined,
       answeringOrg: answeringOrg.trim(),
-      responseContent: responseContent.trim(),
+      responseContent: finalContent,
       documentUrl: documentUrl?.trim() || null,
-      answeredBy: `${session.fullName} (${session.username})`,
+      answeredBy: `${session.fullName || "Cán bộ"} (${session.username || "admin"})`,
     });
 
     return NextResponse.json({

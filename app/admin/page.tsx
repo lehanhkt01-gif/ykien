@@ -124,6 +124,7 @@ export default function AdminDashboardPage() {
   const [documentUrl, setDocumentUrl] = useState("");
   const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+  const [responseModalError, setResponseModalError] = useState<string | null>(null);
   const [responseFiles, setResponseFiles] = useState<File[]>([]);
   const [responseFilesError, setResponseFilesError] = useState<string | null>(null);
   const [isUploadingResponseFiles, setIsUploadingResponseFiles] = useState(false);
@@ -492,6 +493,7 @@ export default function AdminDashboardPage() {
     setResponseFiles([]);
     setResponseFilesError(null);
     setActionSuccessMsg(null);
+    setResponseModalError(null);
   };
 
   // Chọn file hình ảnh, PDF đính kèm trả lời (tối đa 5 file, mỗi file < 5MB)
@@ -535,9 +537,19 @@ export default function AdminDashboardPage() {
   const handleSubmitResponse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFeedback) return;
-    if (!responseContent.trim() || responseContent.length < 5) {
-      alert("Vui lòng nhập nội dung trả lời chi tiết");
+    setResponseModalError(null);
+
+    let contentToSubmit = responseContent.trim();
+    const hasFiles = responseFiles.length > 0;
+    const hasUrl = documentUrl.trim().length > 0;
+
+    if (!contentToSubmit && !hasFiles && !hasUrl) {
+      setResponseModalError("Vui lòng nhập nội dung trả lời chi tiết hoặc đính kèm tệp văn bản / hình ảnh có dấu đỏ.");
       return;
+    }
+
+    if (!contentToSubmit && (hasFiles || hasUrl)) {
+      contentToSubmit = "Cơ quan có thẩm quyền đã ban hành văn bản giải quyết chính thức (chi tiết vui lòng xem tệp tài liệu, văn bản có dấu đỏ đính kèm bên dưới).";
     }
 
     setIsSubmittingResponse(true);
@@ -559,7 +571,7 @@ export default function AdminDashboardPage() {
           const uploadedUrls = uploadData.files.map((f: any) => f.url).join(", ");
           finalDocUrl = finalDocUrl ? `${finalDocUrl}, ${uploadedUrls}` : uploadedUrls;
         } else {
-          alert(uploadData.message || "Lỗi khi tải tệp lên máy chủ");
+          setResponseModalError(uploadData.message || "Lỗi khi tải tệp lên máy chủ");
           setIsSubmittingResponse(false);
           setIsUploadingResponseFiles(false);
           return;
@@ -572,8 +584,9 @@ export default function AdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           feedbackId: selectedFeedback.id,
+          ticketCode: selectedFeedback.ticketCode,
           answeringOrg,
-          responseContent: responseContent.trim(),
+          responseContent: contentToSubmit,
           documentUrl: finalDocUrl,
         }),
       });
@@ -581,18 +594,44 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       if (data.success) {
         setActionSuccessMsg("Đã lưu thông tin trả lời và cập nhật trạng thái thành công!");
+        // Cập nhật state bảng tức thời không cần chờ tải lại
+        setItems((prev) =>
+          prev.map((it) => {
+            if (
+              Number(it.id) === Number(selectedFeedback.id) ||
+              (selectedFeedback.ticketCode && it.ticketCode === selectedFeedback.ticketCode)
+            ) {
+              return {
+                ...it,
+                status: "Đã trả lời",
+                isApproved: true,
+                officialResponse: {
+                  id: (data.data as any)?.id || Math.floor(Math.random() * 10000) + 1,
+                  feedbackId: it.id,
+                  answeringOrg,
+                  responseContent: contentToSubmit,
+                  documentUrl: finalDocUrl || null,
+                  answeredAt: new Date().toISOString(),
+                  answeredBy: currentUser?.fullName || "Cán bộ quản trị",
+                },
+              };
+            }
+            return it;
+          })
+        );
         loadFeedbacks();
         setTimeout(() => {
           setSelectedFeedback(null);
           setActionSuccessMsg(null);
           setResponseFiles([]);
+          setResponseModalError(null);
         }, 1200);
       } else {
-        alert(data.message || "Lỗi khi cập nhật");
+        setResponseModalError(data.message || "Lỗi khi cập nhật văn bản trả lời");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Đã xảy ra lỗi mạng");
+      setResponseModalError("Đã xảy ra lỗi mạng hoặc kết nối máy chủ");
     } finally {
       setIsSubmittingResponse(false);
       setIsUploadingResponseFiles(false);
@@ -1535,13 +1574,15 @@ export default function AdminDashboardPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nội dung văn bản trả lời chi tiết <span className="text-red-600">*</span>
+                    Nội dung văn bản trả lời chi tiết
                   </label>
                   <textarea
-                    required
                     rows={6}
                     value={responseContent}
-                    onChange={(e) => setResponseContent(e.target.value)}
+                    onChange={(e) => {
+                      setResponseContent(e.target.value);
+                      if (responseModalError) setResponseModalError(null);
+                    }}
                     placeholder="Nhập nội dung giải trình, kết quả xác minh, biện pháp xử lý hoặc văn bản trả lời chính thức của cơ quan thẩm quyền..."
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-red-600 focus:outline-none"
                   />
@@ -1644,6 +1685,20 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                 </div>
+
+                {/* Thông báo lỗi hoặc thành công hiển thị ngay vị trí nút bấm */}
+                {responseModalError && (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                    <span>{responseModalError}</span>
+                  </div>
+                )}
+                {actionSuccessMsg && (
+                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+                    <span>{actionSuccessMsg}</span>
+                  </div>
+                )}
 
                 <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
                   <button

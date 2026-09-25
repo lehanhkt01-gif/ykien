@@ -690,6 +690,7 @@ export async function getFeedbackById(idOrCode: string | number) {
 
 export async function respondFeedback(data: {
   feedbackId: number;
+  ticketCode?: string;
   answeringOrg: string;
   responseContent: string;
   documentUrl?: string | null;
@@ -698,12 +699,23 @@ export async function respondFeedback(data: {
 }) {
   const answeredAt = data.answeredAt ? new Date(data.answeredAt) : new Date();
 
+  // Tìm trong bộ nhớ / file JSON trước
+  const feedbacks = getMemoryFeedbacks();
+  const numId = Number(data.feedbackId);
+  const feedback = feedbacks.find(
+    (f) =>
+      (!isNaN(numId) && Number(f.id) === numId) ||
+      (data.ticketCode && f.ticketCode === data.ticketCode)
+  );
+
+  const realFeedbackId = feedback ? Number(feedback.id) : numId;
+
   if (await isDatabaseOnline()) {
     try {
       const response = await prisma.officialResponse.upsert({
-        where: { feedbackId: data.feedbackId },
+        where: { feedbackId: realFeedbackId },
         create: {
-          feedbackId: data.feedbackId,
+          feedbackId: realFeedbackId,
           answeringOrg: data.answeringOrg,
           responseContent: data.responseContent,
           documentUrl: data.documentUrl || null,
@@ -719,43 +731,43 @@ export async function respondFeedback(data: {
         },
       });
 
-      await prisma.voterFeedback.update({
-        where: { id: data.feedbackId },
-        data: { status: "Đã trả lời" },
-      });
+      try {
+        await prisma.voterFeedback.update({
+          where: { id: realFeedbackId },
+          data: { status: "Đã trả lời" },
+        });
+      } catch (errDbUpdate) {
+        console.warn("DB voterFeedback.update warn:", errDbUpdate);
+      }
 
       // Đồng bộ xuống JSON file để giao diện hiển thị ngay không cần reload
-      const feedbacksDb = getMemoryFeedbacks();
-      const fbDb = feedbacksDb.find((f) => Number(f.id) === Number(data.feedbackId));
-      if (fbDb) {
-        fbDb.status = "Đã trả lời";
-        fbDb.isApproved = true;
-        fbDb.officialResponse = {
+      if (feedback) {
+        feedback.status = "Đã trả lời";
+        feedback.isApproved = true;
+        feedback.officialResponse = {
           id: (response as any).id || Math.floor(Math.random() * 10000) + 1,
-          feedbackId: data.feedbackId,
+          feedbackId: realFeedbackId,
           answeringOrg: data.answeringOrg,
           responseContent: data.responseContent,
           documentUrl: data.documentUrl || null,
           answeredAt,
           answeredBy: data.answeredBy,
         };
-        saveFeedbacksToDisk(feedbacksDb);
+        saveFeedbacksToDisk(feedbacks);
       }
 
       return response;
     } catch (error) {
-      // Fallback xuống JSON store
+      console.error("Lỗi cập nhật CSDL quan hệ, chuyển sang lưu JSON:", error);
     }
   }
 
   // Fallback in-memory & file JSON store
-  const feedbacks = getMemoryFeedbacks();
-  const feedback = feedbacks.find((f) => Number(f.id) === Number(data.feedbackId));
   if (!feedback) throw new Error("Không tìm thấy ý kiến cử tri");
 
   const resp: OfficialResponseType = {
     id: Math.floor(Math.random() * 10000) + 1,
-    feedbackId: data.feedbackId,
+    feedbackId: realFeedbackId,
     answeringOrg: data.answeringOrg,
     responseContent: data.responseContent,
     documentUrl: data.documentUrl || null,
@@ -1293,8 +1305,36 @@ export async function updateFeedback(
         });
       }
 
+      // Đồng bộ xuống JSON file
+      const feedbacksDb = getMemoryFeedbacks();
+      const fbDb = feedbacksDb.find((f) => Number(f.id) === Number(id));
+      if (fbDb) {
+        if (data.voterName) fbDb.voterName = data.voterName;
+        if (data.phone !== undefined) fbDb.phone = data.phone;
+        if (data.village) fbDb.village = data.village;
+        if (data.category) fbDb.category = data.category;
+        if (data.content) fbDb.content = data.content;
+        if (data.status) fbDb.status = data.status;
+        if (data.isApproved !== undefined) fbDb.isApproved = data.isApproved;
+        if (data.attachments !== undefined) fbDb.attachments = data.attachments;
+        if (data.responseContent) {
+          fbDb.officialResponse = {
+            id: fbDb.officialResponse?.id || Math.floor(Math.random() * 10000) + 1,
+            feedbackId: Number(id),
+            answeringOrg: data.answeringOrg || "Ủy ban Nhân dân xã Ea Súp",
+            responseContent: data.responseContent,
+            documentUrl: data.documentUrl || null,
+            answeredBy: data.answeredBy || "Lãnh đạo UBND xã",
+            answeredAt: new Date(),
+          };
+          fbDb.status = "Đã trả lời";
+          fbDb.isApproved = true;
+        }
+        saveFeedbacksToDisk(feedbacksDb);
+      }
+
       return await prisma.voterFeedback.findUnique({
-        where: { id },
+        where: { id: Number(id) },
         include: { officialResponse: true },
       });
     }
@@ -1303,7 +1343,7 @@ export async function updateFeedback(
   }
 
   const feedbacks = getMemoryFeedbacks();
-  const item = feedbacks.find((f) => f.id === id);
+  const item = feedbacks.find((f) => Number(f.id) === Number(id));
   if (!item) throw new Error("Không tìm thấy hồ sơ");
   if (data.voterName) item.voterName = data.voterName;
   if (data.phone !== undefined) item.phone = data.phone;
@@ -1317,7 +1357,7 @@ export async function updateFeedback(
   if (data.responseContent) {
     item.officialResponse = {
       id: item.officialResponse?.id || Math.floor(Math.random() * 10000) + 1,
-      feedbackId: id,
+      feedbackId: Number(id),
       answeringOrg: data.answeringOrg || "Ủy ban Nhân dân xã Ea Súp",
       responseContent: data.responseContent,
       documentUrl: data.documentUrl || null,
@@ -1335,13 +1375,12 @@ export async function updateFeedback(
 export async function deleteFeedback(id: number) {
   try {
     if (await isDatabaseOnline()) {
-      await prisma.voterFeedback.delete({ where: { id } });
-      return true;
+      await prisma.voterFeedback.delete({ where: { id: Number(id) } });
     }
   } catch (error) {}
 
   const feedbacks = getMemoryFeedbacks();
-  const idx = feedbacks.findIndex((f) => f.id === id);
+  const idx = feedbacks.findIndex((f) => Number(f.id) === Number(id));
   if (idx >= 0) {
     feedbacks.splice(idx, 1);
     saveFeedbacksToDisk(feedbacks);
