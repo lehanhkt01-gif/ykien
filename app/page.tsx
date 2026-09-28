@@ -138,17 +138,32 @@ export default function HomePage() {
   // Ratings State (Lưu lựa chọn của cử tri đang xem)
   const [ratings, setRatings] = useState<Record<number, string>>({});
   const [ratingNotice, setRatingNotice] = useState<string | null>(null);
+  const [editingRatingId, setEditingRatingId] = useState<number | null>(null);
 
   useEffect(() => {
-    // Kiểm tra phiên đăng nhập của Cử tri (Google OAuth hoặc SĐT)
+    // 1. Tải cache đánh giá từ localStorage để giao diện hiển thị ngay lập tức không bị giật
+    try {
+      const cached = localStorage.getItem("easup_voter_ratings");
+      if (cached) {
+        setRatings(JSON.parse(cached));
+      }
+    } catch {}
+
+    // 2. Kiểm tra phiên đăng nhập của Cử tri (Google OAuth hoặc SĐT) và tải đánh giá từ hệ thống
     const checkVoter = async () => {
       try {
         const res = await fetch("/api/voter/me");
         const data = await res.json();
         if (data.isLoggedIn && data.voter) {
           setCurrentVoter(data.voter);
-          if (data.ratings) {
-            setRatings((prev) => ({ ...prev, ...data.ratings }));
+          if (data.ratings && Object.keys(data.ratings).length > 0) {
+            setRatings((prev) => {
+              const merged = { ...prev, ...data.ratings };
+              try {
+                localStorage.setItem("easup_voter_ratings", JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
         }
       } catch {}
@@ -173,12 +188,23 @@ export default function HomePage() {
 
   const handleRate = async (id: number, ratingValue: "Rất hài lòng" | "Hài lòng" | "Chưa hài lòng") => {
     if (!currentVoter) {
+      setRatingNotice("Chỉ có cử tri mới được quyền đánh giá. Vui lòng đăng nhập Cử tri!");
       setShowAuthModal(true);
+      return;
+    }
+
+    if (currentVoter.role === "ADMIN" || currentVoter.role === "CADRE" || currentVoter.role === "Cán bộ") {
+      setRatingNotice("Chỉ có cử tri mới được quyền đánh giá kết quả giải quyết!");
+      setTimeout(() => setRatingNotice(null), 4000);
       return;
     }
 
     const updated = { ...ratings, [id]: ratingValue };
     setRatings(updated);
+    try {
+      localStorage.setItem("easup_voter_ratings", JSON.stringify(updated));
+    } catch {}
+    setEditingRatingId(null); // Đóng chế độ sửa sau khi chọn
 
     try {
       const res = await fetch("/api/voter/rate", {
@@ -202,6 +228,9 @@ export default function HomePage() {
         );
         setRatingNotice(`Cử tri ${currentVoter.fullName} đã ghi nhận: "${ratingValue}"`);
         setTimeout(() => setRatingNotice(null), 3500);
+      } else {
+        setRatingNotice(data.message || "Không thể lưu đánh giá");
+        setTimeout(() => setRatingNotice(null), 4000);
       }
     } catch (e) {
       console.error(e);
@@ -1006,44 +1035,84 @@ export default function HomePage() {
                             )}
                           </td>
 
-                          {/* 7. Đánh giá kết quả giải quyết - Phân tách 2 chế độ: Cử tri đăng nhập (dấu tích) và Khách xem (Màu sắc Xanh/Vàng/Đỏ) */}
+                          {/* 7. Đánh giá kết quả giải quyết - Hiển thị đánh giá của cử tri, ô edit chỉnh sửa và kiểm tra chỉ cử tri mới được đánh giá */}
                           <td className="py-3 px-3 text-center">
                             {isAnswered ? (
-                              currentVoter ? (
-                                /* GIAO DIỆN DÀNH CHO CỬ TRI ĐÃ ĐĂNG NHẬP: ĐƯỢC TÍCH CHỌN ĐÁNH GIÁ */
-                                <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
-                                  {(
-                                    [
-                                      { label: "Rất hài lòng", color: "bg-emerald-600 text-white font-bold" },
-                                      { label: "Hài lòng", color: "bg-blue-600 text-white font-bold" },
-                                      { label: "Chưa hài lòng", color: "bg-amber-600 text-white font-bold" },
-                                    ] as const
-                                  ).map((opt) => {
-                                    const isChecked = currentRating === opt.label;
-                                    return (
-                                      <label
-                                        key={opt.label}
-                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] cursor-pointer transition select-none ${
-                                          isChecked
-                                            ? `${opt.color} shadow-xs`
-                                            : "text-slate-600 hover:bg-slate-200/80"
-                                        }`}
+                              currentVoter && currentVoter.role !== "ADMIN" && currentVoter.role !== "CADRE" && currentVoter.role !== "Cán bộ" ? (
+                                /* GIAO DIỆN DÀNH CHO CỬ TRI ĐÃ ĐĂNG NHẬP */
+                                currentRating && editingRatingId !== item.id ? (
+                                  /* TRƯỜNG HỢP 1: CỬ TRI ĐÃ ĐÁNH GIÁ - HIỂN THỊ RÕ ĐÁNH GIÁ VÀ CÓ Ô EDIT BÊN CẠNH ĐỂ CHỈNH SỬA */
+                                  <div className="inline-flex items-center gap-2 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold shadow-xs ${
+                                        currentRating === "Rất hài lòng"
+                                          ? "bg-emerald-600 text-white"
+                                          : currentRating === "Hài lòng"
+                                          ? "bg-blue-600 text-white"
+                                          : "bg-amber-600 text-white"
+                                      }`}
+                                      title="Đánh giá của bạn đã được ghi nhận trên hệ thống"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      {currentRating}
+                                    </span>
+                                    {/* Ô EDIT BÊN CẠNH ĐỂ CỬ TRI CHỈNH SỬA ĐÁNH GIÁ */}
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingRatingId(item.id)}
+                                      title="Bấm để chỉnh sửa lại đánh giá của bạn"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-red-700 border border-slate-300 shadow-2xs transition cursor-pointer"
+                                    >
+                                      <Edit className="w-3 h-3 text-red-600" />
+                                      <span>Sửa</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  /* TRƯỜNG HỢP 2: CHƯA ĐÁNH GIÁ HOẶC ĐANG BẤM SỬA - HIỂN THỊ CÁC Ô TÍCH CHỌN ĐÁNH GIÁ */
+                                  <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                                    {(
+                                      [
+                                        { label: "Rất hài lòng", color: "bg-emerald-600 text-white font-bold" },
+                                        { label: "Hài lòng", color: "bg-blue-600 text-white font-bold" },
+                                        { label: "Chưa hài lòng", color: "bg-amber-600 text-white font-bold" },
+                                      ] as const
+                                    ).map((opt) => {
+                                      const isChecked = currentRating === opt.label;
+                                      return (
+                                        <label
+                                          key={opt.label}
+                                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] cursor-pointer transition select-none ${
+                                            isChecked
+                                              ? `${opt.color} shadow-xs`
+                                              : "text-slate-600 hover:bg-slate-200/80"
+                                          }`}
+                                        >
+                                          <input
+                                            type="radio"
+                                            name={`rating-${item.id}`}
+                                            value={opt.label}
+                                            checked={isChecked}
+                                            onChange={() => handleRate(item.id, opt.label)}
+                                            className="w-3 h-3 text-red-700 focus:ring-0 cursor-pointer"
+                                          />
+                                          <span>{opt.label}</span>
+                                        </label>
+                                      );
+                                    })}
+                                    {currentRating && editingRatingId === item.id && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingRatingId(null)}
+                                        title="Hủy / Đóng chế độ sửa"
+                                        className="text-[10px] text-slate-500 hover:text-slate-800 font-semibold px-1.5 py-0.5 rounded hover:bg-slate-200 transition ml-0.5 cursor-pointer"
                                       >
-                                        <input
-                                          type="radio"
-                                          name={`rating-${item.id}`}
-                                          value={opt.label}
-                                          checked={isChecked}
-                                          onChange={() => handleRate(item.id, opt.label)}
-                                          className="w-3 h-3 text-red-700 focus:ring-0 cursor-pointer"
-                                        />
-                                        <span>{opt.label}</span>
-                                      </label>
-                                    );
-                                  })}
-                                </div>
+                                        ✕ Đóng
+                                      </button>
+                                    )}
+                                  </div>
+                                )
                               ) : (
-                                /* GIAO DIỆN DÀNH CHO KHÁCH XEM (CHƯA ĐĂNG NHẬP): HIỆN SỐ LƯỢNG THEO MÀU SẮC XANH - VÀNG - ĐỎ */
+                                /* GIAO DIỆN DÀNH CHO KHÁCH XEM (CHƯA ĐĂNG NHẬP HOẶC CÁN BỘ): CHỈ CỬ TRI MỚI ĐƯỢC QUYỀN ĐÁNH GIÁ */
                                 <div className="inline-flex flex-col items-center gap-1">
                                   <div className="inline-flex flex-wrap items-center justify-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-[11px]">
                                     {/* MÀU XANH: Rất hài lòng */}
@@ -1073,12 +1142,22 @@ export default function HomePage() {
                                       {item.ratingUnsatisfied || 0} Chưa hài lòng
                                     </span>
                                   </div>
-                                  <button
-                                    onClick={() => setShowAuthModal(true)}
-                                    className="text-[10px] text-red-700 hover:text-red-900 font-semibold hover:underline cursor-pointer flex items-center gap-0.5"
-                                  >
-                                    <span>(Đăng nhập cử tri để đánh giá)</span>
-                                  </button>
+                                  {!currentVoter ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setRatingNotice("Chỉ có cử tri mới được quyền đánh giá. Vui lòng đăng nhập Cử tri!");
+                                        setShowAuthModal(true);
+                                      }}
+                                      className="text-[10px] text-red-700 hover:text-red-900 font-semibold hover:underline cursor-pointer flex items-center gap-0.5"
+                                    >
+                                      <span>(Đăng nhập cử tri để đánh giá)</span>
+                                    </button>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-500 italic">
+                                      (Chỉ có cử tri mới được quyền đánh giá)
+                                    </span>
+                                  )}
                                 </div>
                               )
                             ) : (
@@ -1339,6 +1418,107 @@ export default function HomePage() {
                           );
                         })}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* KHỐI ĐÁNH GIÁ DÀNH CHO CỬ TRI NGAY TRONG MODAL VĂN BẢN TRẢ LỜI */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-red-700" />
+                    Đánh giá kết quả giải quyết của cử tri:
+                  </span>
+                  {ratings[selectedResponseItem.id] && (
+                    <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      ✓ Đã lưu trên hệ thống
+                    </span>
+                  )}
+                </div>
+
+                {currentVoter && currentVoter.role !== "ADMIN" && currentVoter.role !== "CADRE" && currentVoter.role !== "Cán bộ" ? (
+                  ratings[selectedResponseItem.id] && editingRatingId !== selectedResponseItem.id ? (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs ${
+                          ratings[selectedResponseItem.id] === "Rất hài lòng"
+                            ? "bg-emerald-600 text-white"
+                            : ratings[selectedResponseItem.id] === "Hài lòng"
+                            ? "bg-blue-600 text-white"
+                            : "bg-amber-600 text-white"
+                        }`}
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Đã đánh giá: {ratings[selectedResponseItem.id]}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingRatingId(selectedResponseItem.id)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 hover:text-red-700 border border-slate-300 shadow-2xs transition cursor-pointer"
+                      >
+                        <Edit className="w-3.5 h-3.5 text-red-600" />
+                        <span>Chỉnh sửa đánh giá</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {(
+                        [
+                          { label: "Rất hài lòng", color: "bg-emerald-600 text-white font-bold" },
+                          { label: "Hài lòng", color: "bg-blue-600 text-white font-bold" },
+                          { label: "Chưa hài lòng", color: "bg-amber-600 text-white font-bold" },
+                        ] as const
+                      ).map((opt) => {
+                        const isChecked = ratings[selectedResponseItem.id] === opt.label;
+                        return (
+                          <label
+                            key={opt.label}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer transition select-none ${
+                              isChecked
+                                ? `${opt.color} shadow-xs`
+                                : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name={`modal-rating-${selectedResponseItem.id}`}
+                              value={opt.label}
+                              checked={isChecked}
+                              onChange={() => handleRate(selectedResponseItem.id, opt.label)}
+                              className="w-3.5 h-3.5 text-red-700 focus:ring-0 cursor-pointer"
+                            />
+                            <span>{opt.label}</span>
+                          </label>
+                        );
+                      })}
+                      {ratings[selectedResponseItem.id] && editingRatingId === selectedResponseItem.id && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingRatingId(null)}
+                          className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2 py-1 rounded hover:bg-slate-200 transition cursor-pointer"
+                        >
+                          ✕ Hủy
+                        </button>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs text-slate-600 italic">
+                      Chỉ có cử tri mới được quyền đánh giá kết quả giải quyết.
+                    </span>
+                    {!currentVoter && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRatingNotice("Chỉ có cử tri mới được quyền đánh giá. Vui lòng đăng nhập Cử tri!");
+                          setShowAuthModal(true);
+                        }}
+                        className="text-xs text-red-700 hover:text-red-900 font-bold hover:underline cursor-pointer"
+                      >
+                        Đăng nhập Cử tri để đánh giá →
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

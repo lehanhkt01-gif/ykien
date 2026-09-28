@@ -46,9 +46,11 @@ export interface FeedbackRatingType {
   id: number;
   feedbackId: number;
   voterPhone: string;
+  voterEmail?: string;
   voterName: string;
   rating: string;
   createdAt: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface UserType {
@@ -211,9 +213,15 @@ function loadRatingsFromDisk(): FeedbackRatingType[] {
   try {
     if (fs.existsSync(RATINGS_FILE)) {
       const raw = fs.readFileSync(RATINGS_FILE, "utf-8");
-      return JSON.parse(raw);
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) return list;
+    } else {
+      fs.writeFileSync(RATINGS_FILE, JSON.stringify([], null, 2), "utf-8");
+      return [];
     }
-  } catch (err) {}
+  } catch (err) {
+    console.error("Lỗi đọc file ratings.json:", err);
+  }
   return [];
 }
 
@@ -222,7 +230,14 @@ function saveRatingsToDisk(ratings: FeedbackRatingType[]) {
   try {
     globalThis.__easupRatings = ratings;
     fs.writeFileSync(RATINGS_FILE, JSON.stringify(ratings, null, 2), "utf-8");
-  } catch (err) {}
+  } catch (err) {
+    try {
+      fs.chmodSync(RATINGS_FILE, 0o666);
+      fs.writeFileSync(RATINGS_FILE, JSON.stringify(ratings, null, 2), "utf-8");
+    } catch (e) {
+      console.error("Lỗi ghi file ratings.json:", e);
+    }
+  }
 }
 
 function getMemoryRatings(): FeedbackRatingType[] {
@@ -1227,102 +1242,49 @@ export async function createOfficerAccount(data: {
 export async function rateFeedback(data: {
   feedbackId: number;
   voterPhone: string;
+  voterEmail?: string;
   voterName: string;
   rating: "Rất hài lòng" | "Hài lòng" | "Chưa hài lòng";
 }) {
-  const { feedbackId, voterPhone, voterName, rating } = data;
+  const { feedbackId, voterPhone, voterEmail, voterName, rating } = data;
+  const voterKey = (voterPhone || voterEmail || "voter").trim();
+  const cleanPhone = (voterPhone || "").trim();
+  const cleanEmail = (voterEmail || "").trim().toLowerCase();
+  const nowIso = new Date().toISOString();
 
-  try {
-    if (await isDatabaseOnline()) {
-      const existing = await prisma.feedbackRating.findUnique({
-        where: {
-          feedbackId_voterPhone: {
-            feedbackId,
-            voterPhone,
-          },
-        },
-      });
-
-      const prevRating = existing?.rating;
-
-      await prisma.feedbackRating.upsert({
-        where: {
-          feedbackId_voterPhone: {
-            feedbackId,
-            voterPhone,
-          },
-        },
-        create: {
-          feedbackId,
-          voterPhone,
-          voterName,
-          rating,
-        },
-        update: {
-          rating,
-          voterName,
-        },
-      });
-
-      const feedback = await prisma.voterFeedback.findUnique({ where: { id: feedbackId } });
-      if (feedback) {
-        let very = feedback.ratingVerySatisfied;
-        let sat = feedback.ratingSatisfied;
-        let unsat = feedback.ratingUnsatisfied;
-
-        if (prevRating === "Rất hài lòng") very = Math.max(0, very - 1);
-        if (prevRating === "Hài lòng") sat = Math.max(0, sat - 1);
-        if (prevRating === "Chưa hài lòng") unsat = Math.max(0, unsat - 1);
-
-        if (rating === "Rất hài lòng") very += 1;
-        if (rating === "Hài lòng") sat += 1;
-        if (rating === "Chưa hài lòng") unsat += 1;
-
-        const updated = await prisma.voterFeedback.update({
-          where: { id: feedbackId },
-          data: {
-            ratingVerySatisfied: very,
-            ratingSatisfied: sat,
-            ratingUnsatisfied: unsat,
-          },
-        });
-
-        return {
-          success: true,
-          ratingVerySatisfied: updated.ratingVerySatisfied,
-          ratingSatisfied: updated.ratingSatisfied,
-          ratingUnsatisfied: updated.ratingUnsatisfied,
-          userRating: rating,
-        };
-      }
-    }
-  } catch (error) {
-    // Fallback
-  }
-
-  // Fallback in-memory & file JSON store
+  // 1. Luôn cập nhật và lưu bền vững vào File Dữ Liệu Hệ Thống (ratings.json và feedbacks.json)
   const feedbacks = getMemoryFeedbacks();
   const ratings = getMemoryRatings();
   const feedback = feedbacks.find((f) => f.id === feedbackId);
   if (!feedback) throw new Error("Không tìm thấy hồ sơ cử tri");
 
   const existingIndex = ratings.findIndex(
-    (r) => r.feedbackId === feedbackId && r.voterPhone === voterPhone
+    (r) =>
+      r.feedbackId === feedbackId &&
+      ((cleanPhone && r.voterPhone && r.voterPhone.trim() === cleanPhone) ||
+        (cleanEmail && r.voterEmail && r.voterEmail.trim().toLowerCase() === cleanEmail) ||
+        (cleanEmail && r.voterPhone && r.voterPhone.trim().toLowerCase() === cleanEmail) ||
+        r.voterPhone === voterKey)
   );
 
   let prevRating: string | null = null;
   if (existingIndex >= 0) {
     prevRating = ratings[existingIndex].rating;
     ratings[existingIndex].rating = rating;
-    ratings[existingIndex].voterName = voterName;
+    ratings[existingIndex].voterName = voterName || ratings[existingIndex].voterName;
+    if (cleanPhone) ratings[existingIndex].voterPhone = cleanPhone;
+    if (cleanEmail) ratings[existingIndex].voterEmail = cleanEmail;
+    ratings[existingIndex].updatedAt = nowIso;
   } else {
     ratings.push({
-      id: ratings.length + 1,
+      id: ratings.length > 0 ? Math.max(...ratings.map((r) => r.id || 0)) + 1 : 1,
       feedbackId,
-      voterPhone,
-      voterName,
+      voterPhone: cleanPhone || cleanEmail || voterKey,
+      voterEmail: cleanEmail,
+      voterName: voterName || "Cử tri Ea Súp",
       rating,
-      createdAt: new Date(),
+      createdAt: nowIso,
+      updatedAt: nowIso,
     });
   }
 
@@ -1342,8 +1304,44 @@ export async function rateFeedback(data: {
   feedback.ratingSatisfied = sat;
   feedback.ratingUnsatisfied = unsat;
 
+  // LƯU RA FILE HỆ THỐNG
   saveFeedbacksToDisk(feedbacks);
   saveRatingsToDisk(ratings);
+
+  // 2. Đồng bộ CSDL nếu CSDL PostgreSQL đang online
+  try {
+    if (await isDatabaseOnline()) {
+      await prisma.feedbackRating.upsert({
+        where: {
+          feedbackId_voterPhone: {
+            feedbackId,
+            voterPhone: voterKey,
+          },
+        },
+        create: {
+          feedbackId,
+          voterPhone: voterKey,
+          voterName: voterName || "Cử tri Ea Súp",
+          rating,
+        },
+        update: {
+          rating,
+          voterName: voterName || "Cử tri Ea Súp",
+        },
+      });
+
+      await prisma.voterFeedback.update({
+        where: { id: feedbackId },
+        data: {
+          ratingVerySatisfied: very,
+          ratingSatisfied: sat,
+          ratingUnsatisfied: unsat,
+        },
+      });
+    }
+  } catch (error) {
+    console.warn("Lỗi đồng bộ DB đánh giá cử tri (dữ liệu file hệ thống vẫn an toàn):", error);
+  }
 
   return {
     success: true,
@@ -1354,25 +1352,41 @@ export async function rateFeedback(data: {
   };
 }
 
-export async function getVoterRatings(voterPhone: string): Promise<Record<number, string>> {
+export async function getVoterRatings(
+  identifiers: string | string[]
+): Promise<Record<number, string>> {
+  const idList = (Array.isArray(identifiers) ? identifiers : [identifiers])
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+
+  if (idList.length === 0) return {};
+
+  const map: Record<number, string> = {};
+
+  // 1. Đọc từ file hệ thống ratings.json
+  const ratings = getMemoryRatings();
+  for (const r of ratings) {
+    const rPhone = r.voterPhone ? r.voterPhone.trim().toLowerCase() : "";
+    const rEmail = r.voterEmail ? r.voterEmail.trim().toLowerCase() : "";
+    const phoneMatch = rPhone && idList.some((id) => id.toLowerCase() === rPhone);
+    const emailMatch = rEmail && idList.some((id) => id.toLowerCase() === rEmail);
+    if (phoneMatch || emailMatch) {
+      map[r.feedbackId] = r.rating;
+    }
+  }
+
+  // 2. Bổ sung từ CSDL Prisma nếu online
   try {
     if (await isDatabaseOnline()) {
       const list = await prisma.feedbackRating.findMany({
-        where: { voterPhone },
+        where: { voterPhone: { in: idList } },
       });
-      const map: Record<number, string> = {};
       for (const r of list) {
         map[r.feedbackId] = r.rating;
       }
-      return map;
     }
   } catch (error) {}
 
-  const ratings = getMemoryRatings();
-  const map: Record<number, string> = {};
-  for (const r of ratings.filter((x) => x.voterPhone === voterPhone)) {
-    map[r.feedbackId] = r.rating;
-  }
   return map;
 }
 

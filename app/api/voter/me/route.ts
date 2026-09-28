@@ -40,7 +40,8 @@ export async function GET() {
         isGoogle: true,
       };
 
-      const ratings = voter.phone ? await getVoterRatings(voter.phone) : {};
+      const identifiers = [voter.phone, voter.email, voter.id].filter(Boolean) as string[];
+      const ratings = identifiers.length > 0 ? await getVoterRatings(identifiers) : {};
 
       return NextResponse.json({
         success: true,
@@ -57,12 +58,13 @@ export async function GET() {
     if (sessionCookie && sessionCookie.value) {
       try {
         const voter = JSON.parse(sessionCookie.value);
-        const ratings = await getVoterRatings(voter.phone);
+        const identifiers = [voter.phone, voter.email, voter.id].filter(Boolean) as string[];
+        const ratings = identifiers.length > 0 ? await getVoterRatings(identifiers) : {};
 
         return NextResponse.json({
           success: true,
           isLoggedIn: true,
-          voter: { ...voter, isGoogle: false },
+          voter: { ...voter, role: voter.role || "Cử tri", isGoogle: false },
           ratings,
         });
       } catch (e) {}

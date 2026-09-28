@@ -6,13 +6,27 @@ import { auth } from "@/auth";
 export async function POST(req: Request) {
   try {
     let voterPhone = "";
+    let voterEmail = "";
     let voterName = "";
+    let isVoter = false;
 
     // 1. Kiểm tra session Google OAuth
     const session = await auth();
     if (session?.user) {
+      const userRole = (session.user as any).role || "Cử tri";
+      if (userRole === "ADMIN" || userRole === "CADRE" || userRole === "Cán bộ") {
+        return NextResponse.json(
+          { success: false, message: "Chỉ có cử tri mới được quyền đánh giá kết quả giải quyết" },
+          { status: 403 }
+        );
+      }
+      isVoter = true;
       voterName = session.user.name || "Cử tri Ea Súp";
-      voterPhone = session.user.phone || session.user.email || session.user.id || "google_user";
+      voterPhone = session.user.phone || "";
+      voterEmail = session.user.email || "";
+      if (!voterPhone && !voterEmail) {
+        voterPhone = session.user.id || "google_user";
+      }
     } else {
       // 2. Kiểm tra session SĐT cũ
       const cookieStore = await cookies();
@@ -20,15 +34,23 @@ export async function POST(req: Request) {
       if (sessionCookie && sessionCookie.value) {
         try {
           const voter = JSON.parse(sessionCookie.value);
-          voterName = voter.fullName;
-          voterPhone = voter.phone;
+          if (voter.role === "ADMIN" || voter.role === "CADRE" || voter.role === "Cán bộ") {
+            return NextResponse.json(
+              { success: false, message: "Chỉ có cử tri mới được quyền đánh giá kết quả giải quyết" },
+              { status: 403 }
+            );
+          }
+          isVoter = true;
+          voterName = voter.fullName || "Cử tri Ea Súp";
+          voterPhone = voter.phone || "";
+          voterEmail = voter.email || "";
         } catch (e) {}
       }
     }
 
-    if (!voterPhone) {
+    if (!isVoter || (!voterPhone && !voterEmail)) {
       return NextResponse.json(
-        { success: false, message: "Vui lòng đăng nhập Cử tri để thực hiện đánh giá kết quả" },
+        { success: false, message: "Chỉ có cử tri mới được quyền đánh giá. Vui lòng đăng nhập Cử tri!" },
         { status: 401 }
       );
     }
@@ -52,6 +74,7 @@ export async function POST(req: Request) {
     const result = await rateFeedback({
       feedbackId: Number(feedbackId),
       voterPhone,
+      voterEmail,
       voterName,
       rating,
     });
