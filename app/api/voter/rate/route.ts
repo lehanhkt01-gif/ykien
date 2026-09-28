@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { feedbackId, rating } = await req.json();
+    const { feedbackId, rating, ticketCode } = await req.json();
 
     if (!feedbackId || !rating) {
       return NextResponse.json(
@@ -60,6 +60,7 @@ export async function POST(req: Request) {
 
     const result = await rateFeedback({
       feedbackId: Number(feedbackId),
+      ticketCode: ticketCode ? String(ticketCode) : undefined,
       voterPhone,
       voterEmail,
       voterName,
