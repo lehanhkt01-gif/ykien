@@ -1354,24 +1354,35 @@ export async function rateFeedback(data: {
 
 export async function getVoterRatings(
   identifiers: string | string[]
-): Promise<Record<number, string>> {
-  const idList = (Array.isArray(identifiers) ? identifiers : [identifiers])
-    .map((x) => String(x || "").trim())
-    .filter(Boolean);
+): Promise<Record<string, string>> {
+  const rawList = Array.isArray(identifiers) ? identifiers : [identifiers];
+  const idList: string[] = [];
+  for (const raw of rawList) {
+    const s = String(raw || "").trim();
+    if (s) {
+      idList.push(s);
+      const lower = s.toLowerCase();
+      if (!idList.includes(lower)) {
+        idList.push(lower);
+      }
+    }
+  }
 
   if (idList.length === 0) return {};
 
-  const map: Record<number, string> = {};
+  const map: Record<string, string> = {};
 
   // 1. Đọc từ file hệ thống ratings.json
   const ratings = getMemoryRatings();
   for (const r of ratings) {
-    const rPhone = r.voterPhone ? r.voterPhone.trim().toLowerCase() : "";
-    const rEmail = r.voterEmail ? r.voterEmail.trim().toLowerCase() : "";
+    const rPhone = r.voterPhone ? String(r.voterPhone).trim().toLowerCase() : "";
+    const rEmail = r.voterEmail ? String(r.voterEmail).trim().toLowerCase() : "";
     const phoneMatch = rPhone && idList.some((id) => id.toLowerCase() === rPhone);
     const emailMatch = rEmail && idList.some((id) => id.toLowerCase() === rEmail);
     if (phoneMatch || emailMatch) {
       map[r.feedbackId] = r.rating;
+      map[String(r.feedbackId)] = r.rating;
+      map[Number(r.feedbackId)] = r.rating;
     }
   }
 
@@ -1383,6 +1394,8 @@ export async function getVoterRatings(
       });
       for (const r of list) {
         map[r.feedbackId] = r.rating;
+        map[String(r.feedbackId)] = r.rating;
+        map[Number(r.feedbackId)] = r.rating;
       }
     }
   } catch (error) {}

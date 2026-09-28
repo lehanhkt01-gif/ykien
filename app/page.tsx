@@ -136,7 +136,7 @@ export default function HomePage() {
   const [selectedResponseItem, setSelectedResponseItem] = useState<FeedbackItem | null>(null);
 
   // Ratings State (Lưu lựa chọn của cử tri đang xem)
-  const [ratings, setRatings] = useState<Record<number, string>>({});
+  const [ratings, setRatings] = useState<Record<string | number, string>>({});
   const [ratingNotice, setRatingNotice] = useState<string | null>(null);
   const [editingRatingId, setEditingRatingId] = useState<number | null>(null);
 
@@ -193,13 +193,12 @@ export default function HomePage() {
       return;
     }
 
-    if (currentVoter.role === "ADMIN" || currentVoter.role === "CADRE" || currentVoter.role === "Cán bộ") {
-      setRatingNotice("Chỉ có cử tri mới được quyền đánh giá kết quả giải quyết!");
-      setTimeout(() => setRatingNotice(null), 4000);
-      return;
-    }
-
-    const updated = { ...ratings, [id]: ratingValue };
+    const updated = {
+      ...ratings,
+      [id]: ratingValue,
+      [String(id)]: ratingValue,
+      [Number(id)]: ratingValue,
+    };
     setRatings(updated);
     try {
       localStorage.setItem("easup_voter_ratings", JSON.stringify(updated));
@@ -942,7 +941,10 @@ export default function HomePage() {
                   <tbody className="divide-y divide-slate-200/80">
                     {items.map((item, index) => {
                       const stt = (page - 1) * 10 + index + 1;
-                      const currentRating = ratings[item.id];
+                      const currentRating =
+                        ratings[item.id] ||
+                        ratings[String(item.id)] ||
+                        ratings[Number(item.id)];
                       const isAnswered = item.status === "Đã trả lời";
 
                       const isAnonymous =
@@ -1035,55 +1037,27 @@ export default function HomePage() {
                             )}
                           </td>
 
-                          {/* 7. Đánh giá kết quả giải quyết - Hiển thị đánh giá của cử tri, ô edit chỉnh sửa và kiểm tra chỉ cử tri mới được đánh giá */}
+                          {/* 7. Đánh giá kết quả giải quyết - Tự động ghi nhớ lựa chọn của cử tri và có ô Edit bên cạnh */}
                           <td className="py-3 px-3 text-center">
                             {isAnswered ? (
-                              currentVoter && currentVoter.role !== "ADMIN" && currentVoter.role !== "CADRE" && currentVoter.role !== "Cán bộ" ? (
-                                /* GIAO DIỆN DÀNH CHO CỬ TRI ĐÃ ĐĂNG NHẬP */
-                                currentRating && editingRatingId !== item.id ? (
-                                  /* TRƯỜNG HỢP 1: CỬ TRI ĐÃ ĐÁNH GIÁ - HIỂN THỊ RÕ ĐÁNH GIÁ VÀ CÓ Ô EDIT BÊN CẠNH ĐỂ CHỈNH SỬA */
-                                  <div className="inline-flex items-center gap-2 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                                    <span
-                                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold shadow-xs ${
-                                        currentRating === "Rất hài lòng"
-                                          ? "bg-emerald-600 text-white"
-                                          : currentRating === "Hài lòng"
-                                          ? "bg-blue-600 text-white"
-                                          : "bg-amber-600 text-white"
-                                      }`}
-                                      title="Đánh giá của bạn đã được ghi nhận trên hệ thống"
-                                    >
-                                      <CheckCircle2 className="w-3.5 h-3.5" />
-                                      {currentRating}
-                                    </span>
-                                    {/* Ô EDIT BÊN CẠNH ĐỂ CỬ TRI CHỈNH SỬA ĐÁNH GIÁ */}
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingRatingId(item.id)}
-                                      title="Bấm để chỉnh sửa lại đánh giá của bạn"
-                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-red-700 border border-slate-300 shadow-2xs transition cursor-pointer"
-                                    >
-                                      <Edit className="w-3 h-3 text-red-600" />
-                                      <span>Sửa</span>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  /* TRƯỜNG HỢP 2: CHƯA ĐÁNH GIÁ HOẶC ĐANG BẤM SỬA - HIỂN THỊ CÁC Ô TÍCH CHỌN ĐÁNH GIÁ */
-                                  <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                              currentVoter ? (
+                                /* GIAO DIỆN DÀNH CHO CỬ TRI ĐÃ ĐĂNG NHẬP: LUÔN NHỚ VÀ TỰ ĐỘNG CHỌN ĐÁNH GIÁ ĐÃ LƯU */
+                                <div className="inline-flex flex-col items-center gap-1">
+                                  <div className="inline-flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
                                     {(
                                       [
-                                        { label: "Rất hài lòng", color: "bg-emerald-600 text-white font-bold" },
-                                        { label: "Hài lòng", color: "bg-blue-600 text-white font-bold" },
-                                        { label: "Chưa hài lòng", color: "bg-amber-600 text-white font-bold" },
+                                        { label: "Rất hài lòng", color: "bg-emerald-600 text-white font-bold shadow-xs", dot: "accent-emerald-600" },
+                                        { label: "Hài lòng", color: "bg-blue-600 text-white font-bold shadow-xs", dot: "accent-blue-600" },
+                                        { label: "Chưa hài lòng", color: "bg-amber-600 text-white font-bold shadow-xs", dot: "accent-amber-600" },
                                       ] as const
                                     ).map((opt) => {
                                       const isChecked = currentRating === opt.label;
                                       return (
                                         <label
                                           key={opt.label}
-                                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] cursor-pointer transition select-none ${
+                                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] cursor-pointer transition select-none ${
                                             isChecked
-                                              ? `${opt.color} shadow-xs`
+                                              ? opt.color
                                               : "text-slate-600 hover:bg-slate-200/80"
                                           }`}
                                         >
@@ -1093,71 +1067,71 @@ export default function HomePage() {
                                             value={opt.label}
                                             checked={isChecked}
                                             onChange={() => handleRate(item.id, opt.label)}
-                                            className="w-3 h-3 text-red-700 focus:ring-0 cursor-pointer"
+                                            className={`w-3.5 h-3.5 ${opt.dot} focus:ring-0 cursor-pointer`}
                                           />
                                           <span>{opt.label}</span>
                                         </label>
                                       );
                                     })}
-                                    {currentRating && editingRatingId === item.id && (
+
+                                    {/* Ô EDIT BÊN CẠNH ĐỂ CỬ TRI CHỈNH SỬA / ĐỔI ĐÁNH GIÁ */}
+                                    {currentRating && (
                                       <button
                                         type="button"
-                                        onClick={() => setEditingRatingId(null)}
-                                        title="Hủy / Đóng chế độ sửa"
-                                        className="text-[10px] text-slate-500 hover:text-slate-800 font-semibold px-1.5 py-0.5 rounded hover:bg-slate-200 transition ml-0.5 cursor-pointer"
+                                        onClick={() => {
+                                          setEditingRatingId(editingRatingId === item.id ? null : item.id);
+                                          setRatingNotice(`Bạn có thể chọn trực tiếp mức độ khác bên cạnh để sửa đánh giá.`);
+                                          setTimeout(() => setRatingNotice(null), 3000);
+                                        }}
+                                        title="Chỉnh sửa lại đánh giá của bạn (hoặc bấm trực tiếp vào ô lựa chọn khác)"
+                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-white hover:bg-slate-100 text-slate-700 hover:text-red-700 border border-slate-300 shadow-2xs transition ml-0.5 cursor-pointer"
                                       >
-                                        ✕ Đóng
+                                        <Edit className="w-2.5 h-2.5 text-red-600" />
+                                        <span>Sửa</span>
                                       </button>
                                     )}
                                   </div>
-                                )
-                              ) : (
-                                /* GIAO DIỆN DÀNH CHO KHÁCH XEM (CHƯA ĐĂNG NHẬP HOẶC CÁN BỘ): CHỈ CỬ TRI MỚI ĐƯỢC QUYỀN ĐÁNH GIÁ */
-                                <div className="inline-flex flex-col items-center gap-1">
-                                  <div className="inline-flex flex-wrap items-center justify-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 text-[11px]">
-                                    {/* MÀU XANH: Rất hài lòng */}
-                                    <span
-                                      title="Số lượng cử tri đánh giá Rất hài lòng"
-                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-100/90 text-emerald-800 font-bold border border-emerald-300"
-                                    >
-                                      <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                                      {item.ratingVerySatisfied || 0} Rất hài lòng
-                                    </span>
 
-                                    {/* MÀU VÀNG: Hài lòng */}
-                                    <span
-                                      title="Số lượng cử tri đánh giá Hài lòng"
-                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-100/90 text-amber-800 font-bold border border-amber-300"
-                                    >
-                                      <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                                      {item.ratingSatisfied || 0} Hài lòng
+                                  {/* HIỂN THỊ DÒNG XÁC NHẬN HỆ THỐNG ĐÃ LƯU ĐÁNH GIÁ CỦA CỬ TRI */}
+                                  {currentRating ? (
+                                    <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                      Hệ thống đã lưu: <strong className="text-slate-900">{currentRating}</strong>
                                     </span>
-
-                                    {/* MÀU ĐỎ: Chưa hài lòng */}
-                                    <span
-                                      title="Số lượng cử tri đánh giá Chưa hài lòng"
-                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100/90 text-red-800 font-bold border border-red-300"
-                                    >
-                                      <span className="w-2 h-2 rounded-full bg-red-600"></span>
-                                      {item.ratingUnsatisfied || 0} Chưa hài lòng
-                                    </span>
-                                  </div>
-                                  {!currentVoter ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setRatingNotice("Chỉ có cử tri mới được quyền đánh giá. Vui lòng đăng nhập Cử tri!");
-                                        setShowAuthModal(true);
-                                      }}
-                                      className="text-[10px] text-red-700 hover:text-red-900 font-semibold hover:underline cursor-pointer flex items-center gap-0.5"
-                                    >
-                                      <span>(Đăng nhập cử tri để đánh giá)</span>
-                                    </button>
                                   ) : (
-                                    <span className="text-[10px] text-slate-500 italic">
-                                      (Chỉ có cử tri mới được quyền đánh giá)
+                                    <span className="text-[10px] text-slate-400 italic">
+                                      (Chọn một mức độ để đánh giá)
                                     </span>
                                   )}
+                                </div>
+                              ) : (
+                                /* GIAO DIỆN DÀNH CHO KHÁCH XEM (CHƯA ĐĂNG NHẬP): CHỈ CỬ TRI MỚI ĐƯỢC QUYỀN ĐÁNH GIÁ */
+                                <div className="inline-flex flex-col items-center gap-1">
+                                  <div
+                                    onClick={() => {
+                                      setRatingNotice("Chỉ có cử tri mới được quyền đánh giá. Vui lòng đăng nhập Cử tri!");
+                                      setShowAuthModal(true);
+                                    }}
+                                    title="Bấm để đăng nhập cử tri và thực hiện đánh giá"
+                                    className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs cursor-pointer opacity-75 hover:opacity-100 transition"
+                                  >
+                                    {["Rất hài lòng", "Hài lòng", "Chưa hài lòng"].map((lbl) => (
+                                      <span key={lbl} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-slate-500 cursor-pointer">
+                                        <input type="radio" disabled className="w-3 h-3 text-slate-400" />
+                                        <span>{lbl}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRatingNotice("Chỉ có cử tri mới được quyền đánh giá. Vui lòng đăng nhập Cử tri!");
+                                      setShowAuthModal(true);
+                                    }}
+                                    className="text-[10px] text-red-700 hover:text-red-900 font-semibold hover:underline cursor-pointer flex items-center gap-0.5"
+                                  >
+                                    <span>(Đăng nhập cử tri để đánh giá)</span>
+                                  </button>
                                 </div>
                               )
                             ) : (
@@ -1436,7 +1410,7 @@ export default function HomePage() {
                   )}
                 </div>
 
-                {currentVoter && currentVoter.role !== "ADMIN" && currentVoter.role !== "CADRE" && currentVoter.role !== "Cán bộ" ? (
+                {currentVoter ? (
                   ratings[selectedResponseItem.id] && editingRatingId !== selectedResponseItem.id ? (
                     <div className="flex items-center gap-2 pt-1">
                       <span

@@ -13,13 +13,6 @@ export async function POST(req: Request) {
     // 1. Kiểm tra session Google OAuth
     const session = await auth();
     if (session?.user) {
-      const userRole = (session.user as any).role || "Cử tri";
-      if (userRole === "ADMIN" || userRole === "CADRE" || userRole === "Cán bộ") {
-        return NextResponse.json(
-          { success: false, message: "Chỉ có cử tri mới được quyền đánh giá kết quả giải quyết" },
-          { status: 403 }
-        );
-      }
       isVoter = true;
       voterName = session.user.name || "Cử tri Ea Súp";
       voterPhone = session.user.phone || "";
@@ -34,12 +27,6 @@ export async function POST(req: Request) {
       if (sessionCookie && sessionCookie.value) {
         try {
           const voter = JSON.parse(sessionCookie.value);
-          if (voter.role === "ADMIN" || voter.role === "CADRE" || voter.role === "Cán bộ") {
-            return NextResponse.json(
-              { success: false, message: "Chỉ có cử tri mới được quyền đánh giá kết quả giải quyết" },
-              { status: 403 }
-            );
-          }
           isVoter = true;
           voterName = voter.fullName || "Cử tri Ea Súp";
           voterPhone = voter.phone || "";
