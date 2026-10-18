@@ -550,16 +550,56 @@ export async function getFeedbacksList(params: {
         where.createdAt = { ...(where.createdAt || {}), lte: new Date(params.toDate) };
       }
 
-      const [total, items] = await Promise.all([
-        prisma.voterFeedback.count({ where }),
-        prisma.voterFeedback.findMany({
-          where,
-          include: { officialResponse: true },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        }),
-      ]);
+      let items: any[] = [];
+      const total = await prisma.voterFeedback.count({ where });
+
+      if (total > 0) {
+        if (!params.isAdmin && (!params.status || params.status === "Tất cả")) {
+          // Khi xem danh sách tổng ý kiến tiếp nhận:
+          // Đưa "Đã trả lời" lên trước, đưa "Đang xác minh/xử lý" (chưa có câu trả lời) xuống sau cùng
+          const allMini = await prisma.voterFeedback.findMany({
+            where,
+            select: {
+              id: true,
+              status: true,
+              createdAt: true,
+              officialResponse: { select: { responseContent: true } },
+            },
+          });
+
+          allMini.sort((a: any, b: any) => {
+            const aAnswered =
+              a.status === "Đã trả lời" ||
+              Boolean(a.officialResponse && a.officialResponse.responseContent && a.officialResponse.responseContent.trim());
+            const bAnswered =
+              b.status === "Đã trả lời" ||
+              Boolean(b.officialResponse && b.officialResponse.responseContent && b.officialResponse.responseContent.trim());
+
+            if (aAnswered && !bAnswered) return -1;
+            if (!aAnswered && bAnswered) return 1;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+
+          const pageIds = allMini.slice(skip, skip + limit).map((x: any) => x.id);
+
+          if (pageIds.length > 0) {
+            const fetched = await prisma.voterFeedback.findMany({
+              where: { id: { in: pageIds } },
+              include: { officialResponse: true },
+            });
+            const itemMap = new Map(fetched.map((it: any) => [it.id, it]));
+            items = pageIds.map((id: any) => itemMap.get(id)).filter(Boolean);
+          }
+        } else {
+          items = await prisma.voterFeedback.findMany({
+            where,
+            include: { officialResponse: true },
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+          });
+        }
+      }
 
       if (total > 0 || (items && items.length > 0)) {
         return {
@@ -667,7 +707,20 @@ export async function getFeedbacksList(params: {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   } else {
-    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Với người dân / cử tri:
+    // Đưa danh sách "Đã trả lời" lên đầu tiên; đưa các ý kiến "Đang xác minh/xử lý" (chưa có câu trả lời) xuống sau cùng
+    filtered.sort((a, b) => {
+      const aAnswered =
+        a.status === "Đã trả lời" ||
+        Boolean(a.officialResponse && a.officialResponse.responseContent && a.officialResponse.responseContent.trim());
+      const bAnswered =
+        b.status === "Đã trả lời" ||
+        Boolean(b.officialResponse && b.officialResponse.responseContent && b.officialResponse.responseContent.trim());
+
+      if (aAnswered && !bAnswered) return -1;
+      if (!aAnswered && bAnswered) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }
 
   const total = filtered.length;

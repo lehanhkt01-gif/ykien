@@ -141,7 +141,19 @@ Tại khối thống kê tổng quan trên trang chủ ([app/page.tsx](file:///d
 
 ---
 
-## 📌 7. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
+## 📌 7. YÊU CẦU 7: ĐƯA DANH SÁCH "ĐANG XÁC MINH/XỬ LÝ" CHƯA CÓ CÂU TRẢ LỜI XUỐNG SAU CÙNG CỦA TỔNG Ý KIẾN TIẾP NHẬN
+
+Tại hàm truy vấn danh sách [lib/data-store.ts](file:///d:/Antigravity/2.%20ykien%20var/lib/data-store.ts) (áp dụng đồng bộ cả trên CSDL PostgreSQL lẫn fallback bộ nhớ JSON):
+- **Hiện trạng trước sửa:** Toàn bộ danh sách sắp xếp thuần túy theo ngày tạo giảm dần (`createdAt: desc`). Do các hồ sơ gửi gần đây (tháng 10/2026) đang trong quá trình thẩm tra xác minh nên xuất hiện toàn bộ 8 hồ sơ "Đang xác minh, xử lý" ở ngay Trang 1, khiến cử tri vào xem có cảm giác chưa có câu trả lời nào.
+- **Giải pháp thực hiện:**
+  - Đối với giao diện người dân / cử tri xem danh sách tổng ý kiến tiếp nhận:
+    1. **Nhóm 1 (Ưu tiên hiển thị trước):** Toàn bộ các hồ sơ **"Đã trả lời"** (đã có nội dung trả lời/văn bản chính thức) được đưa lên các trang đầu tiên, sắp xếp theo ngày tiếp nhận mới nhất.
+    2. **Nhóm 2 (Đưa xuống sau cùng):** Toàn bộ các hồ sơ **"Đang xác minh/xử lý"** (chưa có câu trả lời) được đưa xuống danh sách các trang sau cùng.
+  - Nhờ vậy, ngay khi truy cập Trang 1, người dân luôn thấy toàn bộ 10 hồ sơ đã có kết quả trả lời giải quyết rõ ràng từ các cơ quan chính quyền.
+
+---
+
+## 📌 8. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
 
 Lệnh 1 dòng duy nhất để cập nhật code mới, bảo vệ file ratings và build lại container trên VPS:
 
@@ -151,7 +163,7 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
 
 ---
 
-## 📌 8. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
+## 📌 9. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
 | STT | Đường dẫn tệp | Mục đích thay đổi |
 |---|---|---|
 | 1 | `lib/constants.ts` | Cập nhật `"Thôn Thành Công"` ➔ `"Thôn Thắng Lợi"`; đưa `"Đã trả lời"` lên trước `"Đang xác minh, xử lý"` trong `STATUS_LIST`. |
@@ -160,13 +172,14 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
 | 4 | `app/api/chat/route.ts` | Đồng bộ danh sách 20 thôn buôn trong phản hồi của Trợ lý AI công vụ. |
 | 5 | `app/api/admin/export/route.ts` | Đồng bộ tên Thôn Thắng Lợi; bổ sung lọc xuất theo nội dung (toàn bộ, chưa trả lời, đã trả lời, UBND, MTTQ, ban ngành). |
 | 6 | `app/api/admin/export/[filename]/route.ts` | Đồng bộ tên Thôn Thắng Lợi và tham số lọc xuất file Excel. |
-| 7 | `lib/data-store.ts` | Viết hàm `batchUpdateAnswers()` nạp câu trả lời theo mã hồ sơ, kiểm tra và chặn ghi đè nếu đã có trả lời, phát sinh cảnh báo chi tiết. |
+| 7 | `lib/data-store.ts` | Viết hàm `batchUpdateAnswers()` nạp câu trả lời Excel; cập nhật `getFeedbacksList` đưa hồ sơ đã trả lời lên đầu và đưa hồ sơ đang xử lý (chưa có trả lời) xuống sau cùng. |
 | 8 | `app/api/admin/import/route.ts` | Hỗ trợ tham số `mode === "answers"`, tích hợp `batchUpdateAnswers()` và trích xuất dữ liệu trả lời. |
 | 9 | `app/admin/page.tsx` | Nâng cấp Modal Xuất file (chọn nội dung xuất); Nâng cấp Modal Nhập file (2 chế độ Thêm mới / Nhập câu trả lời kèm khung hiển thị cảnh báo chi tiết). |
 | 10 | `legacy/schema.sql` | Đồng bộ script cơ sở dữ liệu mẫu SQL sang Thôn Thắng Lợi. |
 | 11 | `legacy/db.js` | Đồng bộ tệp cơ sở dữ liệu mẫu JavaScript sang Thôn Thắng Lợi. |
 | 12 | `legacy/index.html` | Đồng bộ dropdown chọn thôn trong tệp HTML tĩnh. |
 | 13 | `NHAT_KY_XU_LY_HE_THONG.md` | Tài liệu lưu trữ chi tiết toàn bộ lịch sử và hướng dẫn hệ thống cho các phiên làm việc tiếp theo. |
+
 
 
 
