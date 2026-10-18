@@ -14,6 +14,8 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const isTemplate = searchParams.get("template") === "true" || filename.includes("Mau_Nhap");
     const exportType = searchParams.get("type") || "all";
+    const scope = searchParams.get("scope") || "all";
+    const targetOrg = searchParams.get("org") || "";
     const search = searchParams.get("search") || undefined;
     const village = searchParams.get("village") || undefined;
     const category = searchParams.get("category") || undefined;
@@ -99,7 +101,36 @@ export async function GET(
       }
 
       const result = await getFeedbacksList(queryParams);
-      const items = result.items || [];
+      let items = result.items || [];
+
+      // Lọc theo nội dung xuất theo yêu cầu:
+      if (scope === "unanswered") {
+        items = items.filter((item: any) => {
+          const hasResp = Boolean(item.officialResponse && item.officialResponse.responseContent && item.officialResponse.responseContent.trim());
+          return item.status !== "Đã trả lời" && !hasResp;
+        });
+      } else if (scope === "answered") {
+        items = items.filter((item: any) => {
+          const hasResp = Boolean(item.officialResponse && item.officialResponse.responseContent && item.officialResponse.responseContent.trim());
+          return item.status === "Đã trả lời" || hasResp;
+        });
+      } else if (scope === "ubnd") {
+        items = items.filter((item: any) => {
+          const org = (item.officialResponse?.answeringOrg || "").toLowerCase();
+          return org.includes("ubnd") || org.includes("nhân dân");
+        });
+      } else if (scope === "mttq") {
+        items = items.filter((item: any) => {
+          const org = (item.officialResponse?.answeringOrg || "").toLowerCase();
+          return org.includes("mttq") || org.includes("mặt trận");
+        });
+      } else if (scope === "org" && targetOrg) {
+        const normOrg = targetOrg.toLowerCase();
+        items = items.filter((item: any) => {
+          const org = (item.officialResponse?.answeringOrg || "").toLowerCase();
+          return org.includes(normOrg) || normOrg.includes(org);
+        });
+      }
 
       rowsData = items.map((item: any, idx: number) => ({
         "STT": idx + 1,

@@ -62,7 +62,32 @@
 
 ---
 
-## 📌 3. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
+## 📌 3. YÊU CẦU 3: THIẾT LẬP NÚT XUẤT FILE CÓ LỰA CHỌN NỘI DUNG XUẤT
+
+Đã nâng cấp chức năng **"Xuất file Excel"** tại [app/admin/page.tsx](file:///d:/Antigravity/2.%20ykien%20var/app/admin/page.tsx) cùng 2 endpoint API [app/api/admin/export/route.ts](file:///d:/Antigravity/2.%20ykien%20var/app/api/admin/export/route.ts) và [app/api/admin/export/[filename]/route.ts](file:///d:/Antigravity/2.%20ykien%20var/app/api/admin/export/%5Bfilename%5D/route.ts):
+
+### 3.1. Các tùy chọn nội dung xuất:
+1. **Xuất toàn bộ**: Tải tất cả hồ sơ có trong hệ thống không phân biệt trạng thái.
+2. **Chưa có nội dung trả lời**: Chỉ xuất các hồ sơ đang xác minh, thẩm tra, xử lý hoặc chờ duyệt (chưa có câu trả lời).
+3. **Đã có trả lời**: Chỉ xuất các hồ sơ đã có nội dung văn bản trả lời công khai.
+4. **UBND xã trả lời**: Chỉ xuất các hồ sơ do Ủy ban Nhân dân Xã Ea Súp thụ lý và trả lời.
+5. **MTTQ xã trả lời**: Chỉ xuất các hồ sơ do Ban Thường trực Ủy ban MTTQ Xã Ea Súp thụ lý và trả lời.
+6. **Cơ quan khác trả lời**: Cho phép chọn cụ thể trong 9 cơ quan nhà nước / đoàn thể (HĐND, Công an, Quân sự, Trạm Y tế, Ban Địa chính - Môi trường, Bộ phận Một cửa...).
+
+### 3.2. Kết hợp phạm vi dữ liệu & Tên file tự động:
+- Cho phép xuất trên **Toàn bộ CSDL** hoặc **Theo bộ lọc tìm kiếm & Thôn/buôn hiện tại**.
+- Hiển thị trực quan số lượng hồ sơ thực tế tương ứng với từng lựa chọn.
+- Tự động đặt tên tệp Excel rõ ràng, ví dụ:
+  - `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_2026-10-18_ToanBo_CSDL.xlsx`
+  - `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_2026-10-18_CHUA_TRA_LOI_CSDL.xlsx`
+  - `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_2026-10-18_DA_TRA_LOI_CSDL.xlsx`
+  - `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_2026-10-18_UBND_Xa_tra_loi_CSDL.xlsx`
+  - `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_2026-10-18_MTTQ_Xa_tra_loi_CSDL.xlsx`
+
+
+---
+
+## 📌 4. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
 
 Khi triển khai các cập nhật này lên máy chủ VPS (đang chạy Docker Compose):
 

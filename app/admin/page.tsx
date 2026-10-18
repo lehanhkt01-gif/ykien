@@ -169,6 +169,8 @@ export default function AdminDashboardPage() {
   // 6. Modal Xuất Dữ Liệu Excel (Đồng bộ chuẩn CSDL 17 cột)
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportOption, setExportOption] = useState<"all" | "filtered">("all");
+  const [exportScope, setExportScope] = useState<"all" | "unanswered" | "answered" | "ubnd" | "mttq" | "org">("all");
+  const [exportCustomOrg, setExportCustomOrg] = useState<string>(ANSWERING_ORGS[0]);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   // 7. Modal Xuất Báo Cáo Thống Kê
@@ -2177,16 +2179,189 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
 
-              {/* Tùy chọn phạm vi xuất */}
+              {/* 1. Tùy chọn nội dung xuất theo yêu cầu */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase mb-2 flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-emerald-700" />
+                  1. Chọn nội dung cần xuất:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Option 1: Xuất toàn bộ */}
+                  <button
+                    type="button"
+                    onClick={() => setExportScope("all")}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex items-start gap-2.5 ${
+                      exportScope === "all"
+                        ? "border-emerald-600 bg-emerald-50/90 ring-2 ring-emerald-500/25 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      📁
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900">Xuất toàn bộ</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                          Tất cả
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Tất cả ý kiến cử tri trong hệ thống</p>
+                    </div>
+                  </button>
+
+                  {/* Option 2: Chưa có nội dung trả lời */}
+                  <button
+                    type="button"
+                    onClick={() => setExportScope("unanswered")}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex items-start gap-2.5 ${
+                      exportScope === "unanswered"
+                        ? "border-amber-600 bg-amber-50/90 ring-2 ring-amber-500/25 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      ⏳
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900">Chưa có nội dung trả lời</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                          {items.filter(it => !it.officialResponse || !it.officialResponse.responseContent?.trim() || it.status === "Đang xác minh, xử lý").length} hồ sơ
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Đang xác minh, xử lý hoặc chờ duyệt</p>
+                    </div>
+                  </button>
+
+                  {/* Option 3: Đã có trả lời */}
+                  <button
+                    type="button"
+                    onClick={() => setExportScope("answered")}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex items-start gap-2.5 ${
+                      exportScope === "answered"
+                        ? "border-teal-600 bg-teal-50/90 ring-2 ring-teal-500/25 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      ✅
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900">Đã có trả lời</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800">
+                          {items.filter(it => it.status === "Đã trả lời" || Boolean(it.officialResponse?.responseContent?.trim())).length} hồ sơ
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Đã ban hành văn bản trả lời công khai</p>
+                    </div>
+                  </button>
+
+                  {/* Option 4: UBND xã trả lời */}
+                  <button
+                    type="button"
+                    onClick={() => setExportScope("ubnd")}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex items-start gap-2.5 ${
+                      exportScope === "ubnd"
+                        ? "border-blue-600 bg-blue-50/90 ring-2 ring-blue-500/25 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      🏛️
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900">UBND xã trả lời</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
+                          {items.filter(it => (it.officialResponse?.answeringOrg || "").toLowerCase().includes("nhân dân") || (it.officialResponse?.answeringOrg || "").toLowerCase().includes("ubnd")).length} hồ sơ
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Do UBND xã Ea Súp giải quyết</p>
+                    </div>
+                  </button>
+
+                  {/* Option 5: MTTQ xã trả lời */}
+                  <button
+                    type="button"
+                    onClick={() => setExportScope("mttq")}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex items-start gap-2.5 ${
+                      exportScope === "mttq"
+                        ? "border-red-600 bg-red-50/90 ring-2 ring-red-500/25 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-red-100 text-red-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      🚩
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900">MTTQ xã trả lời</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-800">
+                          {items.filter(it => (it.officialResponse?.answeringOrg || "").toLowerCase().includes("mặt trận") || (it.officialResponse?.answeringOrg || "").toLowerCase().includes("mttq")).length} hồ sơ
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Do MTTQ xã Ea Súp giải quyết</p>
+                    </div>
+                  </button>
+
+                  {/* Option 6: Cơ quan khác trả lời */}
+                  <button
+                    type="button"
+                    onClick={() => setExportScope("org")}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex items-start gap-2.5 ${
+                      exportScope === "org"
+                        ? "border-indigo-600 bg-indigo-50/90 ring-2 ring-indigo-500/25 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      🏢
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900">Cơ quan khác trả lời</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                          Tùy chọn
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Chọn cơ quan cụ thể bên dưới</p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Dropdown khi chọn cơ quan khác */}
+                {exportScope === "org" && (
+                  <div className="mt-2.5 p-3 bg-indigo-50/90 border border-indigo-200 rounded-xl space-y-1.5 animate-in fade-in duration-150">
+                    <label className="block text-[11px] font-bold text-indigo-950">
+                      Chọn cơ quan ban hành văn bản trả lời:
+                    </label>
+                    <select
+                      value={exportCustomOrg}
+                      onChange={(e) => setExportCustomOrg(e.target.value)}
+                      className="w-full py-1.5 px-3 bg-white border border-indigo-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                    >
+                      {ANSWERING_ORGS.map((org) => (
+                        <option key={org} value={org}>
+                          {org}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Tùy chọn phạm vi xuất */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 uppercase mb-2">
-                  1. Chọn phạm vi dữ liệu xuất:
+                  2. Chọn phạm vi dữ liệu xuất:
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={() => setExportOption("all")}
-                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between gap-2 ${
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between gap-1.5 ${
                       exportOption === "all"
                         ? "border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500/20"
                         : "border-slate-200 hover:border-slate-300 bg-white"
@@ -2199,14 +2374,14 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600">
-                      Xuất toàn bộ hồ sơ trong hệ thống để sao lưu, biên tập hoặc nạp lại.
+                      Xuất tất cả hồ sơ trong toàn bộ cơ sở dữ liệu
                     </p>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setExportOption("filtered")}
-                    className={`p-3.5 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between gap-2 ${
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between gap-1.5 ${
                       exportOption === "filtered"
                         ? "border-emerald-600 bg-emerald-50/70 ring-2 ring-emerald-500/20"
                         : "border-slate-200 hover:border-slate-300 bg-white"
@@ -2219,7 +2394,7 @@ export default function AdminDashboardPage() {
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-600">
-                      Chỉ xuất các hồ sơ đang hiển thị theo từ khóa tìm kiếm và bộ lọc thôn/buôn.
+                      Chỉ xuất các hồ sơ đang hiển thị theo từ khóa và thôn/buôn
                     </p>
                   </button>
                 </div>
@@ -2228,9 +2403,9 @@ export default function AdminDashboardPage() {
               {/* Danh sách 17 cột chuẩn hóa */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 uppercase mb-2">
-                  2. Cấu trúc 17 cột tiêu chuẩn trong file Excel:
+                  3. Cấu trúc 17 cột tiêu chuẩn trong file Excel:
                 </label>
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-36 overflow-y-auto">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-32 overflow-y-auto">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px]">
                     {[
                       "1. STT",
@@ -2283,32 +2458,52 @@ export default function AdminDashboardPage() {
                 >
                   Đóng
                 </button>
-                <a
-                  href={`/api/admin/export/${
-                    exportOption === "all"
-                      ? `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_${new Date().toISOString().slice(0, 10)}_ToanBoCSDL.xlsx`
-                      : `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_${new Date().toISOString().slice(0, 10)}_BoLoc.xlsx`
-                  }?type=${exportOption}${
+                {(() => {
+                  const dateStr = new Date().toISOString().slice(0, 10);
+                  let scopeCode = "ToanBo";
+                  let scopeName = "Xuất toàn bộ";
+                  if (exportScope === "unanswered") {
+                    scopeCode = "CHUA_TRA_LOI";
+                    scopeName = "Chưa có trả lời";
+                  } else if (exportScope === "answered") {
+                    scopeCode = "DA_TRA_LOI";
+                    scopeName = "Đã có trả lời";
+                  } else if (exportScope === "ubnd") {
+                    scopeCode = "UBND_Xa_tra_loi";
+                    scopeName = "UBND xã trả lời";
+                  } else if (exportScope === "mttq") {
+                    scopeCode = "MTTQ_Xa_tra_loi";
+                    scopeName = "MTTQ xã trả lời";
+                  } else if (exportScope === "org") {
+                    scopeCode = (exportCustomOrg || "CoQuan").replace(/[^a-zA-Z0-9À-ỹ]+/g, "_").slice(0, 25);
+                    scopeName = exportCustomOrg;
+                  }
+                  const rangeCode = exportOption === "filtered" ? "BoLoc" : "CSDL";
+                  const downloadFilename = `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_${dateStr}_${scopeCode}_${rangeCode}.xlsx`;
+                  const exportUrl = `/api/admin/export/${downloadFilename}?type=${exportOption}&scope=${exportScope}${
+                    exportScope === "org" ? `&org=${encodeURIComponent(exportCustomOrg)}` : ""
+                  }${
                     exportOption === "filtered"
                       ? `&search=${encodeURIComponent(searchTerm.trim())}&village=${encodeURIComponent(selectedVillage)}&status=${encodeURIComponent(selectedStatus)}`
                       : ""
-                  }`}
-                  download={
-                    exportOption === "all"
-                      ? `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_${new Date().toISOString().slice(0, 10)}_ToanBoCSDL.xlsx`
-                      : `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_${new Date().toISOString().slice(0, 10)}_BoLoc.xlsx`
-                  }
-                  onClick={() => {
-                    const countMsg = exportOption === "all" ? "toàn bộ CSDL" : `${items.length} hồ sơ`;
-                    setExportNotice(`Đã kích hoạt tải xuống tệp Excel: "${exportOption === "all" ? "Toàn bộ CSDL" : "Bộ lọc"}". Tệp có đuôi .xlsx đầy đủ, mở trực tiếp bằng Microsoft Excel!`);
-                    setShowExportModal(false);
-                    setTimeout(() => setExportNotice(null), 25000);
-                  }}
-                  className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs cursor-pointer shadow flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Tải file Excel ngay (.xlsx)
-                </a>
+                  }`;
+
+                  return (
+                    <a
+                      href={exportUrl}
+                      download={downloadFilename}
+                      onClick={() => {
+                        setExportNotice(`Đã kích hoạt tải xuống tệp Excel: "${scopeName}" (${exportOption === "all" ? "Toàn bộ CSDL" : "Theo bộ lọc"}). Tệp có đuôi .xlsx chuẩn 17 cột CSDL!`);
+                        setShowExportModal(false);
+                        setTimeout(() => setExportNotice(null), 25000);
+                      }}
+                      className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs cursor-pointer shadow flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Tải file Excel ngay (.xlsx)
+                    </a>
+                  );
+                })()}
               </div>
             </div>
           </div>

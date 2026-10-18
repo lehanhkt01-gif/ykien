@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
       );
     }
     const exportType = searchParams.get("type") || "all";
+    const scope = searchParams.get("scope") || "all";
+    const targetOrg = searchParams.get("org") || "";
     const search = searchParams.get("search") || undefined;
     const village = searchParams.get("village") || undefined;
     const category = searchParams.get("category") || undefined;
@@ -99,11 +101,49 @@ export async function GET(req: NextRequest) {
       }
 
       const result = await getFeedbacksList(queryParams);
-      const items = result.items || [];
+      let items = result.items || [];
+
+      // Lọc theo nội dung xuất theo yêu cầu:
+      if (scope === "unanswered") {
+        items = items.filter((item: any) => {
+          const hasResp = Boolean(item.officialResponse && item.officialResponse.responseContent && item.officialResponse.responseContent.trim());
+          return item.status !== "Đã trả lời" && !hasResp;
+        });
+      } else if (scope === "answered") {
+        items = items.filter((item: any) => {
+          const hasResp = Boolean(item.officialResponse && item.officialResponse.responseContent && item.officialResponse.responseContent.trim());
+          return item.status === "Đã trả lời" || hasResp;
+        });
+      } else if (scope === "ubnd") {
+        items = items.filter((item: any) => {
+          const org = (item.officialResponse?.answeringOrg || "").toLowerCase();
+          return org.includes("ubnd") || org.includes("nhân dân");
+        });
+      } else if (scope === "mttq") {
+        items = items.filter((item: any) => {
+          const org = (item.officialResponse?.answeringOrg || "").toLowerCase();
+          return org.includes("mttq") || org.includes("mặt trận");
+        });
+      } else if (scope === "org" && targetOrg) {
+        const normOrg = targetOrg.toLowerCase();
+        items = items.filter((item: any) => {
+          const org = (item.officialResponse?.answeringOrg || "").toLowerCase();
+          return org.includes(normOrg) || normOrg.includes(org);
+        });
+      }
+
+      let scopeSuffix = "ToanBo";
+      if (scope === "unanswered") scopeSuffix = "CHUA_TRA_LOI";
+      else if (scope === "answered") scopeSuffix = "DA_TRA_LOI";
+      else if (scope === "ubnd") scopeSuffix = "UBND_Xa_tra_loi";
+      else if (scope === "mttq") scopeSuffix = "MTTQ_Xa_tra_loi";
+      else if (scope === "org" && targetOrg) {
+        scopeSuffix = targetOrg.replace(/[^a-zA-Z0-9À-ỹ]+/g, "_").slice(0, 30);
+      }
 
       const fileDate = new Date().toISOString().slice(0, 10);
-      const suffix = exportType === "filtered" ? "BoLoc" : "ToanBoCSDL";
-      fileName = `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_${fileDate}_${suffix}.xlsx`;
+      const suffix = exportType === "filtered" ? "BoLoc" : "CSDL";
+      fileName = `Danh_sach_y_kien_cu_tri_Xa_Ea_Sup_${fileDate}_${scopeSuffix}_${suffix}.xlsx`;
 
       rowsData = items.map((item: any, idx: number) => ({
         "STT": idx + 1,
