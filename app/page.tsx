@@ -945,9 +945,8 @@ export default function HomePage() {
                     <tr className="bg-slate-50/95 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider">
                       <th className="py-3 px-2 text-center w-10 whitespace-nowrap">TT</th>
                       <th className="py-3 px-3 w-36">Họ tên cử tri</th>
-                      <th className="py-3 px-3 w-32">Thôn / Buôn</th>
-                      <th className="py-3 px-3 w-28">Ngày ý kiến</th>
-                      <th className="py-3 px-3 text-left min-w-[220px] max-w-[340px]">Nội dung ý kiến</th>
+                      <th className="py-3 px-3 w-36">Thôn / Buôn</th>
+                      <th className="py-3 px-3 text-left min-w-[240px] max-w-[400px]">Nội dung ý kiến</th>
                       <th className="py-3 px-3 text-center w-40">Trả lời</th>
                       <th className="py-3 px-3 text-center min-w-[280px]">Đánh giá kết quả giải quyết</th>
                     </tr>
@@ -991,31 +990,32 @@ export default function HomePage() {
                             </div>
                           </td>
 
-                          {/* 3. Thôn/buôn */}
-                          <td className="py-3 px-3">
-                            <span className="font-semibold text-slate-800 flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-red-600 flex-shrink-0" />
-                              {item.village}
-                            </span>
+                          {/* 3. Thôn/buôn & Ngày ý kiến ngay bên dưới */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <div className="font-semibold text-slate-800 flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+                              <span>{item.village}</span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5 ml-4">
+                              <Calendar className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                              <span>
+                                {new Date(item.createdAt).toLocaleDateString("vi-VN", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            </div>
                           </td>
 
-                          {/* 4. Ngày ý kiến */}
-                          <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
-                            {new Date(item.createdAt).toLocaleDateString("vi-VN", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            })}
-                          </td>
-
-                          {/* 5. Nội dung ý kiến - Hiện khoảng 2 dòng, nhấp vào xem đầy đủ */}
+                          {/* 4. Nội dung ý kiến - Định dạng tô đậm, hiện khoảng 2 dòng, nhấp vào xem đầy đủ */}
                           <td className="py-3 px-3">
                             <div
                               onClick={() => setSelectedContentItem(item)}
                               title="Bấm để đọc toàn bộ nội dung ý kiến phản ánh"
                               className="group cursor-pointer p-1.5 -m-1.5 rounded-lg hover:bg-blue-50/80 border border-transparent hover:border-blue-200 transition text-left"
                             >
-                              <p className="text-xs text-slate-800 line-clamp-2 leading-relaxed font-normal group-hover:text-blue-800 transition">
+                              <p className="text-xs text-slate-900 line-clamp-2 leading-relaxed font-bold group-hover:text-blue-800 transition">
                                 {item.content}
                               </p>
                               <div className="mt-1 flex items-center gap-2 flex-wrap">

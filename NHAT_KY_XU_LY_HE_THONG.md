@@ -55,6 +55,10 @@
      - Hiển thị đầy đủ 100% văn bản phản ánh không bị giới hạn độ dài.
      - Hiển thị đầy đủ thông tin: Mã hồ sơ (ví dụ `EASUP-PA-821964`), Ngày gửi, Họ tên cử tri, Địa bàn Thôn/buôn, Lĩnh vực.
      - Hiển thị danh sách tệp đính kèm (hình ảnh chụp hiện trường, tài liệu PDF/DOCX) kèm ảnh thu nhỏ (preview) và nút tải về trực tiếp.
+4. **Gộp cột "Ngày ý kiến" vào dòng "Thôn / Buôn" & Tô đậm nội dung**:
+   - Cột Ngày ý kiến được đưa vào chung ô với Thôn/Buôn: dòng trên hiển thị `📍 [Tên thôn/buôn]`, dòng dưới hiển thị `📅 [Ngày/tháng/năm]` gọn gàng, tiết kiệm diện tích.
+   - Nội dung ý kiến được định dạng **tô đậm** (`font-bold text-slate-900`) giúp cử tri và người dân dễ dàng đọc lướt các phản ánh trên màn hình.
+
 
 ---
 
