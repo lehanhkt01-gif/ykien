@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     } else if (lower.includes("thôn") || lower.includes("buôn") || lower.includes("địa bàn")) {
       reply = `📍 **DANH SÁCH 20 THÔN, BUÔN THUỘC XÃ EA SÚP**:\n\n` +
         `• **Các Buôn**: Buôn A, Buôn B, Buôn C.\n` +
-        `• **Các Thôn**: Thôn 1, Thôn 2, Thôn 3, Thôn 4, Thôn 5, Thôn 6, Thôn 7, Thôn 8, Thôn 9, Thôn 10, Thôn 11, Thôn 12, Thôn 13, Thôn 14, Thôn Thành Công, Thôn Đoàn Kết.\n\n` +
+        `• **Các Thôn**: Thôn 1, Thôn 2, Thôn 3, Thôn 4, Thôn 5, Thôn 6, Thôn 7, Thôn 8, Thôn 9, Thôn 10, Thôn 11, Thôn 12, Thôn 13, Thôn Thắng Lợi, Thôn Hòa Bình, Thôn Đoàn Kết, Thôn Bình Lợi.\n\n` +
         `Ủy ban MTTQ Việt Nam Xã Ea Súp luôn đồng hành, lắng nghe ý kiến của bà con tại mọi thôn buôn.`;
     } else if (lower.includes("gửi ý kiến") || lower.includes("phản ánh") || lower.includes("kiến nghị") || lower.includes("hướng dẫn")) {
       reply = `📝 **CÁCH GỬI Ý KIẾN PHẢN ÁNH CỦA CỬ TRI**:\n\n` +

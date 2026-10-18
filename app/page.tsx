@@ -947,7 +947,7 @@ export default function HomePage() {
                       <th className="py-3 px-3 w-36">Họ tên cử tri</th>
                       <th className="py-3 px-3 w-32">Thôn / Buôn</th>
                       <th className="py-3 px-3 w-28">Ngày ý kiến</th>
-                      <th className="py-3 px-3 text-center w-36">Nội dung ý kiến</th>
+                      <th className="py-3 px-3 text-left min-w-[220px] max-w-[340px]">Nội dung ý kiến</th>
                       <th className="py-3 px-3 text-center w-40">Trả lời</th>
                       <th className="py-3 px-3 text-center min-w-[280px]">Đánh giá kết quả giải quyết</th>
                     </tr>
@@ -1008,24 +1008,29 @@ export default function HomePage() {
                             })}
                           </td>
 
-                          {/* 5. Nội dung ý kiến - Ẩn, bấm vào hiện rộng ra màn hình */}
-                          <td className="py-3 px-3 text-center">
-                            <button
+                          {/* 5. Nội dung ý kiến - Hiện khoảng 2 dòng, nhấp vào xem đầy đủ */}
+                          <td className="py-3 px-3">
+                            <div
                               onClick={() => setSelectedContentItem(item)}
-                              title="Bấm để xem chi tiết toàn bộ nội dung cử tri phản ánh"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-[11px] border border-slate-300 shadow-xs transition cursor-pointer"
+                              title="Bấm để đọc toàn bộ nội dung ý kiến phản ánh"
+                              className="group cursor-pointer p-1.5 -m-1.5 rounded-lg hover:bg-blue-50/80 border border-transparent hover:border-blue-200 transition text-left"
                             >
-                              <Eye className="w-3.5 h-3.5 text-blue-600" />
-                              Xem nội dung
-                            </button>
-                            {item.attachments && item.attachments.length > 0 && (
-                              <div className="mt-1">
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shadow-2xs">
-                                  <Paperclip className="w-2.5 h-2.5 text-amber-700" />
-                                  {item.attachments.length} tệp
+                              <p className="text-xs text-slate-800 line-clamp-2 leading-relaxed font-normal group-hover:text-blue-800 transition">
+                                {item.content}
+                              </p>
+                              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 group-hover:text-blue-800 group-hover:underline">
+                                  <Eye className="w-3 h-3 text-blue-600 flex-shrink-0" />
+                                  Xem đầy đủ
                                 </span>
+                                {item.attachments && item.attachments.length > 0 && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded shadow-2xs">
+                                    <Paperclip className="w-2.5 h-2.5 text-amber-700" />
+                                    {item.attachments.length} tệp
+                                  </span>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </td>
 
                           {/* 6. Trả lời - Nếu chưa cập nhật nội dung trả lời thì để mặc định là 'Đang xác minh, xử lý', trừ trường hợp đợi duyệt và đã có nội dung trả lời */}

@@ -103,3 +103,17 @@ Web trả lời cử tri/
 3. **Kiểm tra các nút điều hướng:**
    - Nhấn nút "Trò chuyện với AI" để đảm bảo mở đúng đường dẫn ChatGPT trong tab mới.
    - Thử nghiệm gửi form phản ánh và kiểm tra thông báo hoàn tất.
+
+---
+
+## Cập Nhật Mới Nhất (Phiên làm việc 18/10/2026)
+
+- [x] **Đổi tên thôn "Thôn Thành Công" thành "Thôn Thắng Lợi":**
+  - Đồng bộ trên toàn bộ hệ thống (`lib/constants.ts`, `initial_data.json`, `app/api/chat/route.ts`, export templates, legacy schema/db).
+  - Tự động cập nhật tất cả bộ lọc, dropdown chọn thôn buôn và AI chatbot.
+- [x] **Nâng cấp cột "Nội dung ý kiến":**
+  - Hiển thị xem trước khoảng 2 dòng ý kiến cử tri (`line-clamp-2`), kèm icon và nhãn `Xem đầy đủ` cùng badge đính kèm tệp.
+  - Khi nhấp vào, tự động mở Modal chi tiết toàn màn hình để cử tri/cán bộ đọc trọn vẹn toàn bộ phản ánh.
+- [x] **Lưu trữ nhật ký hệ thống:**
+  - Tạo tệp `NHAT_KY_XU_LY_HE_THONG.md` ghi nhận toàn bộ chi tiết và hướng dẫn deploy.
+

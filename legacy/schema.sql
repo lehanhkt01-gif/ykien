@@ -127,7 +127,7 @@ INSERT INTO villages (code, name, village_type, display_order) VALUES
 ('BUON_A', 'Buôn A', 'Buôn', 1),
 ('BUON_B', 'Buôn B', 'Buôn', 2),
 ('BUON_C', 'Buôn C', 'Buôn', 3),
-('THON_THANH_CONG', 'Thôn Thành Công', 'Thôn', 4),
+('THON_THANG_LOI', 'Thôn Thắng Lợi', 'Thôn', 4),
 ('THON_HOA_BINH', 'Thôn Hòa Bình', 'Thôn', 5),
 ('THON_DOAN_KET', 'Thôn Đoàn Kết', 'Thôn', 6),
 ('THON_BINH_LOI', 'Thôn Bình Lợi', 'Thôn', 7),
@@ -166,6 +166,6 @@ ON CONFLICT (username) DO NOTHING;
 -- Chèn phản ánh mẫu thực tế
 INSERT INTO citizen_feedbacks (ticket_code, sender_name, sender_phone, village, village_name, category, category_name, title, content, status_code, status_label, response_content, created_at) VALUES
 ('EASUP-PA-892415', 'Trần Văn Mạnh', '0913.845.210', 'Buôn A', 'Buôn A', 'Đường giao thông nông thôn, kênh mương thủy lợi', 'Đường giao thông nông thôn, kênh mương thủy lợi', 'Kiến nghị sửa chữa dặm vá tuyến đường liên thôn qua Buôn A', 'Tuyến đường nội bộ qua Buôn A xuất hiện nhiều ổ gà sau các trận mưa lớn, gây khó khăn cho việc đi lại của bà con và học sinh.', 'COMPLETED', 'Đã hoàn tất xử lý', 'UBND xã Ea Súp đã tiến hành khảo sát thực địa và phân bổ nguồn kinh phí duy tu đường giao thông nông thôn, dự kiến hoàn tất dặm vá trong tháng 9/2026.', NOW() - INTERVAL '4 days'),
-('EASUP-PA-671239', 'Nguyễn Thị Lành', '0988.123.456', 'Thôn Thành Công', 'Thôn Thành Công', 'Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt', 'Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt', 'Phản ánh tình trạng bãi rác tự phát gây ô nhiễm khu dân cư', 'Tại ngã ba đường liên thôn đoạn qua Thôn Thành Công có bãi rác tự phát tồn đọng lâu ngày bốc mùi hôi, đề nghị xã có biện pháp thu gom xử lý.', 'PROCESSING', 'Đang thẩm tra, xử lý', 'UBMTTQ xã đã kiến nghị UBND xã chỉ đạo Tổ Vệ sinh môi trường tiến hành thu gom, cắm biển cấm đổ rác và giao ban tự quản thôn giám sát.', NOW() - INTERVAL '3 days'),
+('EASUP-PA-671239', 'Nguyễn Thị Lành', '0988.123.456', 'Thôn Thắng Lợi', 'Thôn Thắng Lợi', 'Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt', 'Vệ sinh môi trường, nguồn nước & rác thải sinh hoạt', 'Phản ánh tình trạng bãi rác tự phát gây ô nhiễm khu dân cư', 'Tại ngã ba đường liên thôn đoạn qua Thôn Thắng Lợi có bãi rác tự phát tồn đọng lâu ngày bốc mùi hôi, đề nghị xã có biện pháp thu gom xử lý.', 'PROCESSING', 'Đang thẩm tra, xử lý', 'UBMTTQ xã đã kiến nghị UBND xã chỉ đạo Tổ Vệ sinh môi trường tiến hành thu gom, cắm biển cấm đổ rác và giao ban tự quản thôn giám sát.', NOW() - INTERVAL '3 days'),
 ('EASUP-PA-452108', 'Y Krông Niê', '0977.567.890', 'Buôn B', 'Buôn B', 'Chế độ chính sách, hỗ trợ hộ nghèo, đại đoàn kết', 'Chế độ chính sách, hỗ trợ hộ nghèo, đại đoàn kết', 'Đề nghị hướng dẫn hồ sơ hỗ trợ sửa chữa nhà Đại đoàn kết', 'Gia đình tôi thuộc diện hộ cận nghèo, nhà ở dột nát xuống cấp nghiêm trọng, muốn làm thủ tục xin hỗ trợ xây sửa nhà đại đoàn kết.', 'COMPLETED', 'Đã hoàn tất xử lý', 'Ban Vận động Quỹ Vì người nghèo xã Ea Súp đã cử cán bộ xuống thẩm định thực tế và đưa vào danh sách bình xét hỗ trợ đợt 2 năm 2026.', NOW() - INTERVAL '2 days')
 ON CONFLICT (ticket_code) DO NOTHING;

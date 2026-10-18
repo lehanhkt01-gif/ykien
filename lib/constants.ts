@@ -6,7 +6,7 @@ export const VILLAGES = [
   "Buôn A",
   "Buôn B",
   "Buôn C",
-  "Thôn Thành Công",
+  "Thôn Thắng Lợi",
   "Thôn Hòa Bình",
   "Thôn Đoàn Kết",
   "Thôn Bình Lợi",
