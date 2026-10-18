@@ -944,7 +944,7 @@ export default function HomePage() {
                   <thead>
                     <tr className="bg-slate-50/95 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider">
                       <th className="py-3 px-2 text-center w-10 whitespace-nowrap">TT</th>
-                      <th className="py-3 px-3 w-36">Họ tên cử tri</th>
+                      <th className="py-3 px-2 w-20 sm:w-24 max-w-[100px] leading-tight">Họ tên cử tri</th>
                       <th className="py-3 px-3 w-36">Thôn / Buôn</th>
                       <th className="py-3 px-3 text-left min-w-[240px] max-w-[400px]">Nội dung ý kiến</th>
                       <th className="py-3 px-3 text-center w-40">Trả lời</th>
@@ -974,18 +974,24 @@ export default function HomePage() {
                             {stt}
                           </td>
 
-                          {/* 2. Họ tên cử tri */}
-                          <td className="py-3 px-3 whitespace-nowrap">
+                          {/* 2. Họ tên cử tri - Thu hẹp còn 1/2, tên dài xuống dòng tối đa 2 dòng */}
+                          <td className="py-3 px-2 w-20 sm:w-24 max-w-[100px]">
                             {!isAnonymous ? (
-                              <div className="font-bold text-slate-900 text-xs">
+                              <div
+                                className="font-bold text-slate-900 text-xs leading-snug line-clamp-2 break-words"
+                                title={item.voterName}
+                              >
                                 {item.voterName}
                               </div>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-500 italic">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-500 italic">
                                 Ẩn danh
                               </span>
                             )}
-                            <div className="text-[10px] font-mono text-red-800/80 mt-0.5">
+                            <div
+                              className="text-[9.5px] font-mono tracking-tighter text-red-800/80 mt-0.5 truncate"
+                              title={item.ticketCode}
+                            >
                               {item.ticketCode}
                             </div>
                           </td>

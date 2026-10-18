@@ -114,7 +114,20 @@
 
 ---
 
-## 📌 5. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
+## 📌 5. YÊU CẦU 5: THU HẸP CỘT "HỌ TÊN CỬ TRI" CÒN 1/2, HỌ TÊN DÀI HIỂN THỊ 2 DÒNG
+
+Tại bảng tra cứu ý kiến cử tri ngoài trang chủ ([app/page.tsx](file:///d:/Antigravity/2.%20ykien%20var/app/page.tsx)):
+- **Hiện trạng trước sửa:** Cột `"HỌ TÊN CỬ TRI"` có bề rộng `w-36` và áp dụng `whitespace-nowrap`, khiến khi có những dòng có nhiều tên hoặc họ tên dài (như *"Châu Thị Hạnh, Nguyễn Thị Lan"*), cả cột bị kéo dãn bề ngang rất rộng.
+- **Giải pháp thực hiện:**
+  1. Giảm bề rộng cột xuống còn một nửa: từ `w-36` (144px) xuống `w-20 sm:w-24 max-w-[100px]` (~80px - 96px).
+  2. Bỏ thuộc tính `whitespace-nowrap`.
+  3. Định dạng `item.voterName` với `line-clamp-2 break-words leading-snug`: tên dài sẽ tự động ngắt xuống dòng tối đa 2 dòng, có thuộc tính `title` xem đầy đủ khi rê chuột.
+  4. Thu gọn mã hồ sơ bên dưới với `text-[9.5px] font-mono tracking-tighter truncate`.
+  5. Cột `"NỘI DUNG Ý KIẾN"` và các cột khác có thêm không gian hiển thị rộng rãi, cân đối và thoáng mắt.
+
+---
+
+## 📌 6. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
 
 Lệnh 1 dòng duy nhất để cập nhật code mới, bảo vệ file ratings và build lại container trên VPS:
 
@@ -124,11 +137,11 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
 
 ---
 
-## 📌 6. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
+## 📌 7. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
 | STT | Đường dẫn tệp | Mục đích thay đổi |
 |---|---|---|
 | 1 | `lib/constants.ts` | Cập nhật `"Thôn Thành Công"` ➔ `"Thôn Thắng Lợi"` trong danh mục 20 thôn buôn chuẩn. |
-| 2 | `app/page.tsx` | Hiển thị 2 dòng ý kiến cử tri (`line-clamp-2`), nhấp vào mở modal đọc chi tiết trọn vẹn; gộp Ngày ý kiến dưới Thôn/Buôn; tô đậm nội dung phản ánh. |
+| 2 | `app/page.tsx` | Hiển thị 2 dòng ý kiến cử tri (`line-clamp-2`); gộp Ngày ý kiến dưới Thôn/Buôn; tô đậm nội dung phản ánh; thu hẹp 1/2 cột Họ tên cử tri và ngắt 2 dòng. |
 | 3 | `initial_data.json` | Cập nhật mã `THON_THANG_LOI`, tên thôn và dữ liệu mẫu phản ánh. |
 | 4 | `app/api/chat/route.ts` | Đồng bộ danh sách 20 thôn buôn trong phản hồi của Trợ lý AI công vụ. |
 | 5 | `app/api/admin/export/route.ts` | Đồng bộ tên Thôn Thắng Lợi; bổ sung lọc xuất theo nội dung (toàn bộ, chưa trả lời, đã trả lời, UBND, MTTQ, ban ngành). |
@@ -140,4 +153,5 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
 | 11 | `legacy/db.js` | Đồng bộ tệp cơ sở dữ liệu mẫu JavaScript sang Thôn Thắng Lợi. |
 | 12 | `legacy/index.html` | Đồng bộ dropdown chọn thôn trong tệp HTML tĩnh. |
 | 13 | `NHAT_KY_XU_LY_HE_THONG.md` | Tài liệu lưu trữ chi tiết toàn bộ lịch sử và hướng dẫn hệ thống cho các phiên làm việc tiếp theo. |
+
 
