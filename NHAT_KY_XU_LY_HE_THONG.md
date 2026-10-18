@@ -127,7 +127,21 @@ Tại bảng tra cứu ý kiến cử tri ngoài trang chủ ([app/page.tsx](fil
 
 ---
 
-## 📌 6. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
+## 📌 6. YÊU CẦU 6: ĐƯA THẺ "ĐÃ TRẢ LỜI CÔNG KHAI" LÊN ĐẦU TIÊN, ẨN THẺ "ĐỢI DUYỆT"
+
+Tại khối thống kê tổng quan trên trang chủ ([app/page.tsx](file:///d:/Antigravity/2.%20ykien%20var/app/page.tsx)) và danh mục trạng thái ([lib/constants.ts](file:///d:/Antigravity/2.%20ykien%20var/lib/constants.ts)):
+- **Ẩn thẻ "Đợi duyệt":** Người dân và khách truy cập cổng thông tin chỉ quan tâm các hồ sơ đã công khai hoặc đang thụ lý xử lý.
+- **Đưa thẻ "ĐÃ TRẢ LỜI CÔNG KHAI" lên vị trí số 1 đầu tiên:** Tôn vinh kết quả xử lý giải quyết của chính quyền xã (99 hồ sơ, đạt 93% hoàn thành), tạo ấn tượng tốt nhất cho cử tri khi vào trang.
+- **Sắp xếp lại thứ tự 3 thẻ:**
+  1. Thẻ 1: **ĐÃ TRẢ LỜI CÔNG KHAI** (Màu xanh lá - 99 hồ sơ, tỷ lệ hoàn thành).
+  2. Thẻ 2: **TỔNG Ý KIẾN TIẾP NHẬN** (Màu xám/slate - 107 hồ sơ).
+  3. Thẻ 3: **ĐANG XÁC MINH, XỬ LÝ** (Màu xanh dương - 8 hồ sơ).
+- Điều chỉnh lưới hiển thị thành `grid-cols-1 sm:grid-cols-3` chia đều 3 cột cân đối trên mọi kích thước màn hình.
+- Đồng bộ danh mục `STATUS_LIST` đưa `"Đã trả lời"` lên trước `"Đang xác minh, xử lý"`.
+
+---
+
+## 📌 7. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
 
 Lệnh 1 dòng duy nhất để cập nhật code mới, bảo vệ file ratings và build lại container trên VPS:
 
@@ -137,11 +151,11 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
 
 ---
 
-## 📌 7. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
+## 📌 8. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
 | STT | Đường dẫn tệp | Mục đích thay đổi |
 |---|---|---|
-| 1 | `lib/constants.ts` | Cập nhật `"Thôn Thành Công"` ➔ `"Thôn Thắng Lợi"` trong danh mục 20 thôn buôn chuẩn. |
-| 2 | `app/page.tsx` | Hiển thị 2 dòng ý kiến cử tri (`line-clamp-2`); gộp Ngày ý kiến dưới Thôn/Buôn; tô đậm nội dung phản ánh; thu hẹp 1/2 cột Họ tên cử tri và ngắt 2 dòng. |
+| 1 | `lib/constants.ts` | Cập nhật `"Thôn Thành Công"` ➔ `"Thôn Thắng Lợi"`; đưa `"Đã trả lời"` lên trước `"Đang xác minh, xử lý"` trong `STATUS_LIST`. |
+| 2 | `app/page.tsx` | Hiển thị 2 dòng ý kiến (`line-clamp-2`); gộp Ngày ý kiến dưới Thôn/Buôn; tô đậm nội dung; thu hẹp 1/2 cột cử tri; đưa thẻ "Đã trả lời công khai" lên đầu và ẩn thẻ "Đợi duyệt". |
 | 3 | `initial_data.json` | Cập nhật mã `THON_THANG_LOI`, tên thôn và dữ liệu mẫu phản ánh. |
 | 4 | `app/api/chat/route.ts` | Đồng bộ danh sách 20 thôn buôn trong phản hồi của Trợ lý AI công vụ. |
 | 5 | `app/api/admin/export/route.ts` | Đồng bộ tên Thôn Thắng Lợi; bổ sung lọc xuất theo nội dung (toàn bộ, chưa trả lời, đã trả lời, UBND, MTTQ, ban ngành). |
@@ -153,5 +167,6 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
 | 11 | `legacy/db.js` | Đồng bộ tệp cơ sở dữ liệu mẫu JavaScript sang Thôn Thắng Lợi. |
 | 12 | `legacy/index.html` | Đồng bộ dropdown chọn thôn trong tệp HTML tĩnh. |
 | 13 | `NHAT_KY_XU_LY_HE_THONG.md` | Tài liệu lưu trữ chi tiết toàn bộ lịch sử và hướng dẫn hệ thống cho các phiên làm việc tiếp theo. |
+
 
 

@@ -651,8 +651,37 @@ export default function HomePage() {
       {/* 2. KHỐI THỐNG KÊ (METRICS) - ĐỒNG BỘ CHÍNH XÁC VỚI DANH SÁCH HỒ SƠ */}
       <section className="bg-white border-b border-slate-200 py-3 sm:py-4 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {/* Card 1: Tổng số */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            {/* Card 1: Đã trả lời công khai (Đưa lên đầu tiên theo yêu cầu) */}
+            <div
+              onClick={() => {
+                setSelectedStatus("Đã trả lời");
+                setPage(1);
+              }}
+              title="Bấm để lọc danh sách hồ sơ Đã trả lời công khai"
+              className={`rounded-lg px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between border shadow-xs cursor-pointer transition ${
+                selectedStatus === "Đã trả lời"
+                  ? "bg-emerald-100/70 border-emerald-400 ring-2 ring-emerald-600/20"
+                  : "bg-emerald-50/50 border-emerald-200/80 hover:bg-emerald-100/50"
+              }`}
+            >
+              <div>
+                <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide">
+                  Đã trả lời công khai
+                </p>
+                <p className="text-xl sm:text-2xl font-black text-emerald-700 leading-none mt-1">
+                  {stats.answered}
+                </p>
+                <p className="text-[11px] text-emerald-600 mt-1">
+                  Đạt {stats.resolutionRate}% hoàn thành
+                </p>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-4.5 h-4.5" />
+              </div>
+            </div>
+
+            {/* Card 2: Tổng ý kiến tiếp nhận */}
             <div
               onClick={() => {
                 setSelectedStatus("Tất cả");
@@ -679,34 +708,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Card 2: Đợi duyệt (Thay thế cho Đã tiếp nhận) */}
-            <div
-              onClick={() => {
-                setSelectedStatus("Đợi duyệt");
-                setPage(1);
-              }}
-              title="Bấm để xem số hồ sơ ý kiến cử tri đợi duyệt"
-              className={`rounded-lg px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between border shadow-xs cursor-pointer transition ${
-                selectedStatus === "Đợi duyệt" || selectedStatus === "Chờ duyệt"
-                  ? "bg-amber-100/70 border-amber-400 ring-2 ring-amber-600/20"
-                  : "bg-amber-50/50 border-amber-200/80 hover:bg-amber-100/50"
-              }`}
-            >
-              <div>
-                <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wide">
-                  Đợi duyệt
-                </p>
-                <p className="text-xl sm:text-2xl font-black text-amber-700 leading-none mt-1">
-                  {stats.pendingApproval ?? stats.received ?? 0}
-                </p>
-                <p className="text-[11px] text-amber-600 mt-1">Hồ sơ chờ phê duyệt</p>
-              </div>
-              <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
-                <Clock className="w-4.5 h-4.5" />
-              </div>
-            </div>
-
-            {/* Card 3: Đang xác minh, xử lý (Toàn bộ ý kiến đang xác minh, xử lý) */}
+            {/* Card 3: Đang xác minh, xử lý */}
             <div
               onClick={() => {
                 setSelectedStatus("Đang xác minh, xử lý");
@@ -730,35 +732,6 @@ export default function HomePage() {
               </div>
               <div className="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
                 <Inbox className="w-4.5 h-4.5" />
-              </div>
-            </div>
-
-            {/* Card 4: Đã trả lời công khai */}
-            <div
-              onClick={() => {
-                setSelectedStatus("Đã trả lời");
-                setPage(1);
-              }}
-              title="Bấm để lọc danh sách hồ sơ Đã trả lời công khai"
-              className={`rounded-lg px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between border shadow-xs cursor-pointer transition ${
-                selectedStatus === "Đã trả lời"
-                  ? "bg-emerald-100/70 border-emerald-400 ring-2 ring-emerald-600/20"
-                  : "bg-emerald-50/50 border-emerald-200/80 hover:bg-emerald-100/50"
-              }`}
-            >
-              <div>
-                <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wide">
-                  Đã trả lời công khai
-                </p>
-                <p className="text-xl sm:text-2xl font-black text-emerald-700 leading-none mt-1">
-                  {stats.answered}
-                </p>
-                <p className="text-[11px] text-emerald-600 mt-1">
-                  Đạt {stats.resolutionRate}% hoàn thành
-                </p>
-              </div>
-              <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 className="w-4.5 h-4.5" />
               </div>
             </div>
           </div>

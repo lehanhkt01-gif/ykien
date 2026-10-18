@@ -40,8 +40,8 @@ export const CATEGORIES = [
 
 export const STATUS_LIST = [
   "Tất cả",
-  "Đang xác minh, xử lý",
   "Đã trả lời",
+  "Đang xác minh, xử lý",
 ] as const;
 
 export const ANSWERING_ORGS = [
