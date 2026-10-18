@@ -1621,6 +1621,104 @@ export async function batchImportFeedbacks(items: any[]) {
   return results;
 }
 
+export async function batchUpdateAnswers(items: any[]) {
+  const feedbacks = getMemoryFeedbacks();
+  let updatedCount = 0;
+  const warnings: { ticketCode: string; voterName: string; reason: string }[] = [];
+  const notFoundList: { ticketCode: string; voterName?: string; reason: string }[] = [];
+  const updatedList: { ticketCode: string; voterName: string }[] = [];
+  const noContentList: { ticketCode: string; voterName: string }[] = [];
+
+  for (const item of items) {
+    const ticketCode = item.ticketCode ? String(item.ticketCode).trim() : "";
+    let existing: VoterFeedbackType | undefined;
+
+    if (ticketCode) {
+      existing = feedbacks.find(
+        (f) => f.ticketCode && f.ticketCode.toLowerCase() === ticketCode.toLowerCase()
+      );
+    }
+
+    // Nếu không khớp mã hồ sơ, thử tìm theo nội dung phản ánh tương đồng (> 15 ký tự)
+    if (!existing && item.content && String(item.content).trim().length > 15) {
+      const normContent = String(item.content).trim().toLowerCase();
+      existing = feedbacks.find((f) => f.content && f.content.trim().toLowerCase() === normContent);
+    }
+
+    if (!existing) {
+      notFoundList.push({
+        ticketCode: ticketCode || "Không rõ mã",
+        voterName: item.voterName,
+        reason: ticketCode
+          ? `Không tìm thấy mã hồ sơ [${ticketCode}] trong hệ thống`
+          : "Dòng dữ liệu không có mã hồ sơ hợp lệ",
+      });
+      continue;
+    }
+
+    // Kiểm tra xem hồ sơ này đã có câu trả lời hay chưa
+    const hasExistingResponse =
+      existing.status === "Đã trả lời" ||
+      Boolean(
+        existing.officialResponse &&
+          existing.officialResponse.responseContent &&
+          existing.officialResponse.responseContent.trim().length > 0
+      );
+
+    if (hasExistingResponse) {
+      const answeringOrg = existing.officialResponse?.answeringOrg || "Đã có văn bản trả lời";
+      warnings.push({
+        ticketCode: existing.ticketCode,
+        voterName: existing.voterName,
+        reason: `Hồ sơ [${existing.ticketCode}] của cử tri "${existing.voterName}" ĐÃ CÓ câu trả lời từ trước (bởi ${answeringOrg}). Hệ thống đã bỏ qua không ghi đè để bảo vệ dữ liệu.`,
+      });
+      continue;
+    }
+
+    // Nếu chưa có câu trả lời, kiểm tra xem dòng trong file Excel có nội dung trả lời hay không
+    const responseContent = item.responseContent ? String(item.responseContent).trim() : "";
+    if (!responseContent) {
+      noContentList.push({
+        ticketCode: existing.ticketCode,
+        voterName: existing.voterName,
+      });
+      continue;
+    }
+
+    try {
+      await respondFeedback({
+        feedbackId: Number(existing.id),
+        ticketCode: existing.ticketCode,
+        answeringOrg: item.answeringOrg || "Ủy ban Nhân dân xã Ea Súp",
+        responseContent,
+        documentUrl: item.documentUrl || null,
+        answeredBy: item.answeredBy || "Lãnh đạo UBND xã",
+        answeredAt: item.answeredAt || new Date(),
+      });
+      updatedCount++;
+      updatedList.push({
+        ticketCode: existing.ticketCode,
+        voterName: existing.voterName,
+      });
+    } catch (err: any) {
+      console.error(`Lỗi cập nhật trả lời cho hồ sơ ${existing.ticketCode}:`, err);
+    }
+  }
+
+  saveFeedbacksToDisk(getMemoryFeedbacks());
+
+  return {
+    totalRows: items.length,
+    updatedCount,
+    alreadyAnsweredCount: warnings.length,
+    notFoundCount: notFoundList.length,
+    noContentCount: noContentList.length,
+    warnings,
+    notFoundList,
+    updatedList,
+  };
+}
+
 export async function getSystemSetting(key: string): Promise<string | null> {
   try {
     if (await isDatabaseOnline()) {

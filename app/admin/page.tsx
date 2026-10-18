@@ -156,7 +156,15 @@ export default function AdminDashboardPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importLoading, setImportLoading] = useState(false);
-  const [importNotice, setImportNotice] = useState<{ success: boolean; msg: string } | null>(null);
+  const [importMode, setImportMode] = useState<"new_feedbacks" | "answers">("new_feedbacks");
+  const [importNotice, setImportNotice] = useState<{
+    success: boolean;
+    msg: string;
+    warnings?: { ticketCode: string; voterName: string; reason: string }[];
+    updatedCount?: number;
+    alreadyAnsweredCount?: number;
+    notFoundCount?: number;
+  } | null>(null);
 
   // 5. Modal Cấu Hình AI Chatbot & API Key
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -779,6 +787,7 @@ export default function AdminDashboardPage() {
 
     const formData = new FormData();
     formData.append("file", importFile);
+    formData.append("mode", importMode);
 
     try {
       const res = await fetch("/api/admin/import", {
@@ -788,16 +797,25 @@ export default function AdminDashboardPage() {
 
       const data = await res.json();
       if (data.success) {
-        setImportNotice({ success: true, msg: data.message });
+        setImportNotice({
+          success: true,
+          msg: data.message,
+          warnings: data.warnings,
+          updatedCount: data.updatedCount,
+          alreadyAnsweredCount: data.alreadyAnsweredCount,
+          notFoundCount: data.notFoundCount,
+        });
         setSearchTerm("");
         setSelectedVillage("Tất cả");
         setSelectedStatus("Tất cả");
         await loadFeedbacks();
-        setTimeout(() => {
-          setShowImportModal(false);
-          setImportFile(null);
-          setImportNotice(null);
-        }, 2500);
+        if (!data.warnings || data.warnings.length === 0) {
+          setTimeout(() => {
+            setShowImportModal(false);
+            setImportFile(null);
+            setImportNotice(null);
+          }, 3500);
+        }
       } else {
         setImportNotice({ success: false, msg: data.message || "Lỗi xử lý file Excel" });
       }
@@ -2047,59 +2065,164 @@ export default function AdminDashboardPage() {
       {/* 6. MODAL NHẬP DỮ LIỆU TỪ FILE EXCEL (IMPORT) */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm no-print">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-amber-300" />
-                <h3 className="font-bold text-sm sm:text-base uppercase">
-                  Nhập dữ liệu ý kiến cử tri từ Excel
+                <h3 className="font-bold text-sm sm:text-base uppercase tracking-tight">
+                  Nhập dữ liệu ý kiến &amp; câu trả lời từ Excel
                 </h3>
               </div>
               <button
-                onClick={() => setShowImportModal(false)}
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportNotice(null);
+                }}
                 className="text-blue-200 hover:text-white transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleImportExcelSubmit} className="p-6 space-y-4">
-              <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl space-y-2 text-xs">
-                <p className="font-bold text-blue-950 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-blue-700" />
-                  Hướng dẫn nạp dữ liệu:
-                </p>
-                <p className="text-slate-700 leading-relaxed">
-                  Hệ thống hỗ trợ file định dạng <strong>.xlsx, .xls, .csv</strong> chuẩn hóa 100% theo <strong>17 cột CSDL</strong> (khớp hoàn toàn với file tải từ nút <em>&quot;Xuất file Excel&quot;</em>). Bạn có thể dùng trực tiếp file đã xuất từ hệ thống để chỉnh sửa rồi nạp lại, hoặc tải file mẫu bên dưới.
-                </p>
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <a
-                    href="/api/admin/export/Mau_Nhap_Y_Kien_Cu_Tri_EaSup_Chuan_CSDL.xlsx?template=true"
-                    download="Mau_Nhap_Y_Kien_Cu_Tri_EaSup_Chuan_CSDL.xlsx"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-800 hover:text-blue-900 underline cursor-pointer"
+            <form onSubmit={handleImportExcelSubmit} className="p-6 space-y-4 overflow-y-auto">
+              {/* 1. Chọn chế độ nạp file */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase mb-2 flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-blue-700" />
+                  1. Chọn mục đích nạp file:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Chế độ 1: Thêm mới */}
+                  <button
+                    type="button"
+                    onClick={() => setImportMode("new_feedbacks")}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex items-start gap-2.5 ${
+                      importMode === "new_feedbacks"
+                        ? "border-blue-600 bg-blue-50/90 ring-2 ring-blue-500/25 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    Tải file mẫu Excel chuẩn (.xlsx)
-                  </a>
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      📝
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-xs text-slate-900 block">Thêm hồ sơ ý kiến mới</span>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Tạo mới các ý kiến phản ánh của cử tri vào hệ thống</p>
+                    </div>
+                  </button>
+
+                  {/* Chế độ 2: Nhập câu trả lời */}
+                  <button
+                    type="button"
+                    onClick={() => setImportMode("answers")}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition flex items-start gap-2.5 ${
+                      importMode === "answers"
+                        ? "border-emerald-600 bg-emerald-50/90 ring-2 ring-emerald-500/25 shadow-xs"
+                        : "border-slate-200 hover:border-slate-300 bg-white"
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                      💬
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900">Nhập câu trả lời</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                          Có cảnh báo
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Cập nhật trả lời cho câu hỏi (báo nếu đã có câu trả lời)</p>
+                    </div>
+                  </button>
                 </div>
               </div>
 
-              {importNotice && (
-                <div
-                  className={`p-3 rounded-lg border text-xs font-bold flex items-center gap-2 ${
-                    importNotice.success
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                      : "bg-red-50 border-red-300 text-red-800"
-                  }`}
-                >
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{importNotice.msg}</span>
+              {/* Hướng dẫn theo từng chế độ */}
+              {importMode === "answers" ? (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 text-xs text-emerald-950">
+                  <p className="font-bold flex items-center gap-1.5 text-emerald-900">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    Quy trình nạp câu trả lời &amp; Cơ chế cảnh báo:
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1 text-slate-700 leading-relaxed text-[11px]">
+                    <li>Hệ thống đối chiếu theo <strong>Mã hồ sơ</strong> (ví dụ: <code>EASUP-PA-XXXXXX</code>) có trong file Excel.</li>
+                    <li>Đối với những câu hỏi <strong>chưa có nội dung trả lời</strong>: Tự động cập nhật nội dung trả lời, cơ quan, người ký và chuyển sang trạng thái <em>&quot;Đã trả lời&quot;</em>.</li>
+                    <li>Đối với những câu hỏi <strong>ĐÃ CÓ câu trả lời từ trước</strong>: Hệ thống sẽ tự động <strong>bỏ qua (không ghi đè)</strong> và <strong>đưa ra cảnh báo chi tiết</strong> để tránh mất dữ liệu đã ban hành.</li>
+                  </ul>
+                </div>
+              ) : (
+                <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl space-y-1.5 text-xs text-blue-950">
+                  <p className="font-bold flex items-center gap-1.5 text-blue-900">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    Hướng dẫn nạp hồ sơ mới:
+                  </p>
+                  <p className="text-slate-700 leading-relaxed text-[11px]">
+                    Hệ thống hỗ trợ file định dạng <strong>.xlsx, .xls, .csv</strong> chuẩn hóa 100% theo <strong>17 cột CSDL</strong>. Cần có tối thiểu cột <em>&quot;Nội dung ý kiến&quot;</em> để hệ thống tiếp nhận.
+                  </p>
+                  <div className="pt-0.5">
+                    <a
+                      href="/api/admin/export/Mau_Nhap_Y_Kien_Cu_Tri_EaSup_Chuan_CSDL.xlsx?template=true"
+                      download="Mau_Nhap_Y_Kien_Cu_Tri_EaSup_Chuan_CSDL.xlsx"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-800 hover:text-blue-900 underline cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Tải file mẫu Excel chuẩn (.xlsx)
+                    </a>
+                  </div>
                 </div>
               )}
 
+              {/* Thông báo kết quả & CẢNH BÁO CHI TIẾT */}
+              {importNotice && (
+                <div className="space-y-2">
+                  <div
+                    className={`p-3 rounded-lg border text-xs font-bold flex items-start gap-2 ${
+                      importNotice.success
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                        : "bg-red-50 border-red-300 text-red-800"
+                    }`}
+                  >
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{importNotice.msg}</span>
+                  </div>
+
+                  {/* KHUNG CẢNH BÁO NẾU CÓ CÂU HỎI ĐÃ CÓ CÂU TRẢ LỜI TỪ TRƯỚC */}
+                  {importNotice.warnings && importNotice.warnings.length > 0 && (
+                    <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                          <ShieldAlert className="w-4 h-4 text-amber-700" />
+                          CẢNH BÁO: Phát hiện {importNotice.warnings.length} hồ sơ ĐÃ CÓ câu trả lời từ trước (đã giữ nguyên, không ghi đè):
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                          {importNotice.warnings.length} cảnh báo
+                        </span>
+                      </div>
+                      <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                        {importNotice.warnings.map((w, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2 bg-white/90 border border-amber-200 rounded text-[11px] text-amber-950 space-y-0.5"
+                          >
+                            <div className="font-bold text-red-800 font-mono">
+                              #{idx + 1}. Mã hồ sơ: {w.ticketCode} - Cử tri: {w.voterName}
+                            </div>
+                            <div className="text-slate-700">{w.reason}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-slate-500 italic">
+                        * Ghi chú: Hệ thống tự động bảo vệ các câu trả lời đã ban hành trước đó để tránh bị ghi đè nhầm lẫn.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2. Chọn file từ máy tính */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-2">
-                  Chọn file Excel từ máy tính của bạn:
+                  2. Chọn file Excel từ máy tính của bạn:
                 </label>
                 <input
                   type="file"
@@ -2110,10 +2233,14 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
+              {/* Footer nút hành động */}
               <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowImportModal(false)}
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportNotice(null);
+                  }}
                   className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 cursor-pointer"
                 >
                   Đóng
@@ -2121,17 +2248,26 @@ export default function AdminDashboardPage() {
                 <button
                   type="submit"
                   disabled={importLoading || !importFile}
-                  className="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg text-xs cursor-pointer shadow disabled:opacity-50 flex items-center gap-2"
+                  className={`px-5 py-2 text-white font-bold rounded-lg text-xs cursor-pointer shadow disabled:opacity-50 flex items-center gap-2 ${
+                    importMode === "answers"
+                      ? "bg-emerald-700 hover:bg-emerald-800"
+                      : "bg-blue-700 hover:bg-blue-800"
+                  }`}
                 >
                   {importLoading ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Đang xử lý file...
+                      Đang xử lý nạp file...
+                    </>
+                  ) : importMode === "answers" ? (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Cập nhật câu trả lời vào CSDL
                     </>
                   ) : (
                     <>
                       <Upload className="w-4 h-4" />
-                      Nạp dữ liệu vào CSDL
+                      Nạp hồ sơ mới vào CSDL
                     </>
                   )}
                 </button>

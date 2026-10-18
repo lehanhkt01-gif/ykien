@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { batchImportFeedbacks } from "@/lib/data-store";
+import { batchImportFeedbacks, batchUpdateAnswers } from "@/lib/data-store";
 import { VILLAGES, CATEGORIES } from "@/lib/constants";
 import * as XLSX from "xlsx";
 
@@ -54,6 +54,7 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    const mode = (formData.get("mode") as string) || "new_feedbacks";
 
     if (!file) {
       return NextResponse.json(
@@ -287,10 +288,34 @@ export async function POST(req: Request) {
       );
     }
 
+    if (mode === "answers") {
+      const updateResult = await batchUpdateAnswers(parsedItems);
+      return NextResponse.json({
+        success: true,
+        mode: "answers",
+        updatedCount: updateResult.updatedCount,
+        alreadyAnsweredCount: updateResult.alreadyAnsweredCount,
+        notFoundCount: updateResult.notFoundCount,
+        noContentCount: updateResult.noContentCount,
+        warnings: updateResult.warnings,
+        notFoundList: updateResult.notFoundList,
+        message: `Đã cập nhật câu trả lời thành công cho ${updateResult.updatedCount} hồ sơ!${
+          updateResult.alreadyAnsweredCount > 0
+            ? ` Phát hiện ${updateResult.alreadyAnsweredCount} hồ sơ đã có câu trả lời từ trước (hệ thống đã đưa ra cảnh báo và giữ nguyên câu trả lời cũ).`
+            : ""
+        }${
+          updateResult.notFoundCount > 0
+            ? ` Có ${updateResult.notFoundCount} dòng không tìm thấy mã hồ sơ tương ứng.`
+            : ""
+        }`,
+      });
+    }
+
     const imported = await batchImportFeedbacks(parsedItems);
 
     return NextResponse.json({
       success: true,
+      mode: "new_feedbacks",
       message: `Đã nạp và lưu thành công ${imported.length} hồ sơ ý kiến cử tri vào cơ sở dữ liệu!`,
       count: imported.length,
     });

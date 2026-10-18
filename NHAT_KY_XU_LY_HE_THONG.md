@@ -87,36 +87,57 @@
 
 ---
 
-## 📌 4. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
+---
 
-Khi triển khai các cập nhật này lên máy chủ VPS (đang chạy Docker Compose):
+## 📌 4. YÊU CẦU 4: THIẾT LẬP NÚT NHẬP FILE - BỔ SUNG CHẾ ĐỘ "NHẬP CÂU TRẢ LỜI" & CƠ CHẾ CẢNH BÁO
+
+Đã nâng cấp chức năng **"Nhập file Excel"** tại [app/admin/page.tsx](file:///d:/Antigravity/2.%20ykien%20var/app/admin/page.tsx), [app/api/admin/import/route.ts](file:///d:/Antigravity/2.%20ykien%20var/app/api/admin/import/route.ts) và [lib/data-store.ts](file:///d:/Antigravity/2.%20ykien%20var/lib/data-store.ts):
+
+### 4.1. Bổ sung 2 chế độ nạp file rõ ràng:
+1. **Chế độ 1: Thêm hồ sơ ý kiến mới (`new_feedbacks`)**:
+   - Sử dụng khi tiếp nhận danh sách ý kiến/phản ánh mới của cử tri từ các buổi tiếp xúc cử tri.
+   - Hệ thống tự động tạo mã hồ sơ mới (`EASUP-PA-XXXXXX`), thiết lập trạng thái *"Đã tiếp nhận"* hoặc *"Đang xử lý"*.
+2. **Chế độ 2: Nhập câu trả lời (`answers`)**:
+   - Sử dụng khi cơ quan (UBND xã, MTTQ xã, các ban ngành) gửi file Excel tổng hợp các nội dung trả lời / giải quyết cử tri.
+   - Hệ thống tự động đối chiếu theo **Mã hồ sơ** (`ticketCode` như `EASUP-PA-821964`) hoặc đối chiếu theo **Nội dung ý kiến** nếu không có mã.
+
+### 4.2. Cơ chế xử lý an toàn & Cảnh báo thông minh:
+- **Đối với hồ sơ CHƯA CÓ câu trả lời**:
+  - Tự động nạp nội dung trả lời (`responseContent`), cơ quan trả lời (`answeringOrg`), người ký (`answeredBy`), văn bản đính kèm (`documentUrl`), ngày trả lời.
+  - Tự động chuyển trạng thái hồ sơ sang *"Đã trả lời"*.
+  - Tăng biến đếm `updatedCount`.
+- **Đối với hồ sơ ĐÃ CÓ câu trả lời từ trước (Cơ chế bảo vệ dữ liệu)**:
+  - Hệ thống phát hiện hồ sơ đã ở trạng thái *"Đã trả lời"* hoặc đã có nội dung văn bản giải quyết trước đó.
+  - **Tự động BỎ QUA, KHÔNG GHI ĐÈ** để tránh làm mất mát hoặc sai lệch câu trả lời chính thức đã ban hành.
+  - **Đưa ra cảnh báo chi tiết**: Ghi nhận mã hồ sơ, tên cử tri và cơ quan đã trả lời trước đó vào danh sách `warnings`.
+  - Hiển thị khung cảnh báo màu vàng nổi bật kèm biểu tượng khiên bảo vệ `ShieldAlert` trong giao diện Quản trị với đầy đủ danh sách các hồ sơ bị bỏ qua và lý do chi tiết.
+
+---
+
+## 📌 5. QUY TRÌNH DEPLOY / CẬP NHẬT LÊN MÁY CHỦ VPS
+
+Lệnh 1 dòng duy nhất để cập nhật code mới, bảo vệ file ratings và build lại container trên VPS:
 
 ```bash
-# 1. Đăng nhập vào VPS hoặc thư mục dự án
-cd /app/ykien  # hoặc đường dẫn dự án trên VPS
-
-# 2. Kéo code mới nhất từ git (nếu quản lý qua git)
-git pull origin main
-
-# 3. Chạy script build lại container Docker
-bash scripts/rebuild-docker.sh
-# Hoặc chạy trực tiếp bằng docker-compose:
-docker compose build web
-docker compose up -d web
+cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/dev/null ; git pull origin main && docker compose build web && docker compose up -d web
 ```
 
 ---
 
-## 📌 4. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
+## 📌 6. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
 | STT | Đường dẫn tệp | Mục đích thay đổi |
 |---|---|---|
 | 1 | `lib/constants.ts` | Cập nhật `"Thôn Thành Công"` ➔ `"Thôn Thắng Lợi"` trong danh mục 20 thôn buôn chuẩn. |
-| 2 | `app/page.tsx` | Hiển thị 2 dòng ý kiến cử tri (`line-clamp-2`), nhấp vào mở modal đọc chi tiết trọn vẹn. |
+| 2 | `app/page.tsx` | Hiển thị 2 dòng ý kiến cử tri (`line-clamp-2`), nhấp vào mở modal đọc chi tiết trọn vẹn; gộp Ngày ý kiến dưới Thôn/Buôn; tô đậm nội dung phản ánh. |
 | 3 | `initial_data.json` | Cập nhật mã `THON_THANG_LOI`, tên thôn và dữ liệu mẫu phản ánh. |
 | 4 | `app/api/chat/route.ts` | Đồng bộ danh sách 20 thôn buôn trong phản hồi của Trợ lý AI công vụ. |
-| 5 | `app/api/admin/export/route.ts` | Đồng bộ tên Thôn Thắng Lợi trong mẫu xuất dữ liệu Excel. |
-| 6 | `app/api/admin/export/[filename]/route.ts` | Đồng bộ tên Thôn Thắng Lợi trong endpoint xuất file Excel. |
-| 7 | `legacy/schema.sql` | Đồng bộ script cơ sở dữ liệu mẫu SQL sang Thôn Thắng Lợi. |
-| 8 | `legacy/db.js` | Đồng bộ tệp cơ sở dữ liệu mẫu JavaScript sang Thôn Thắng Lợi. |
-| 9 | `legacy/index.html` | Đồng bộ dropdown chọn thôn trong tệp HTML tĩnh. |
-| 10 | `NHAT_KY_XU_LY_HE_THONG.md` | Tài liệu lưu trữ chi tiết quá trình xử lý cho các phiên làm việc tiếp theo. |
+| 5 | `app/api/admin/export/route.ts` | Đồng bộ tên Thôn Thắng Lợi; bổ sung lọc xuất theo nội dung (toàn bộ, chưa trả lời, đã trả lời, UBND, MTTQ, ban ngành). |
+| 6 | `app/api/admin/export/[filename]/route.ts` | Đồng bộ tên Thôn Thắng Lợi và tham số lọc xuất file Excel. |
+| 7 | `lib/data-store.ts` | Viết hàm `batchUpdateAnswers()` nạp câu trả lời theo mã hồ sơ, kiểm tra và chặn ghi đè nếu đã có trả lời, phát sinh cảnh báo chi tiết. |
+| 8 | `app/api/admin/import/route.ts` | Hỗ trợ tham số `mode === "answers"`, tích hợp `batchUpdateAnswers()` và trích xuất dữ liệu trả lời. |
+| 9 | `app/admin/page.tsx` | Nâng cấp Modal Xuất file (chọn nội dung xuất); Nâng cấp Modal Nhập file (2 chế độ Thêm mới / Nhập câu trả lời kèm khung hiển thị cảnh báo chi tiết). |
+| 10 | `legacy/schema.sql` | Đồng bộ script cơ sở dữ liệu mẫu SQL sang Thôn Thắng Lợi. |
+| 11 | `legacy/db.js` | Đồng bộ tệp cơ sở dữ liệu mẫu JavaScript sang Thôn Thắng Lợi. |
+| 12 | `legacy/index.html` | Đồng bộ dropdown chọn thôn trong tệp HTML tĩnh. |
+| 13 | `NHAT_KY_XU_LY_HE_THONG.md` | Tài liệu lưu trữ chi tiết toàn bộ lịch sử và hướng dẫn hệ thống cho các phiên làm việc tiếp theo. |
+
