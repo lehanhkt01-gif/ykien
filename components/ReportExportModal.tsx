@@ -102,8 +102,8 @@ const normalizeVi = (text: string): string => {
     .trim();
 };
 
-// Trích xuất các từ khóa đặc trưng tiếng Việt (bỏ stop words thông dụng)
-const extractKeywords = (text: string): string[] => {
+// Trích xuất từ khóa nội dung chính (loại bỏ triệt để stop words chung chung của văn phong hành chính & hạ tầng)
+const extractMainKeywords = (text: string): string[] => {
   if (!text) return [];
   const stopWords = new Set([
     "xin", "chao", "gui", "loi", "kinh", "thua", "cac", "cap", "lanh", "dao",
@@ -111,7 +111,15 @@ const extractKeywords = (text: string): string[] => {
     "chung", "la", "va", "cua", "co", "de", "thi", "ma", "nhung", "rat", "mong",
     "cam", "on", "nay", "do", "duoc", "mot", "hai", "ba", "nhieu", "it", "khi",
     "luc", "trong", "tren", "duoi", "ngoai", "vao", "ra", "ve", "tai", "cho",
-    "biet", "bao", "nam", "thang", "ngay", "hien", "qua", "lai", "len", "xuong"
+    "biet", "bao", "nam", "thang", "ngay", "hien", "qua", "lai", "len", "xuong",
+    // Từ ngữ chung chung không đại diện cho công trình/vị trí cụ thể
+    "duong", "tuyen", "doan", "khu", "vuc", "tinh", "trang", "hien", "nay",
+    "di", "lai", "kho", "khan", "som", "dau", "tu", "sua", "chua", "lam",
+    "nang", "cap", "be", "tong", "nhua", "dat", "mua", "ngap", "ung", "nuoc",
+    "troi", "tron", "truot", "nghiem", "trong", "anh", "huong", "phuong", "tien",
+    "xe", "co", "ba", "con", "hoc", "sinh", "sinh", "hoat", "san", "xuat",
+    "de", "nghi", "yeu", "cau", "xem", "xet", "giai", "quyet", "kiem", "tra",
+    "khao", "sat", "phuong", "an", "khac", "phuc", "som", "co", "quan", "chuc", "nang"
   ]);
 
   const clean = normalizeVi(text);
@@ -119,64 +127,82 @@ const extractKeywords = (text: string): string[] => {
   return Array.from(new Set(words));
 };
 
-// ĐỐI CHIẾU VỚI TỔNG THỂ TOÀN BỘ NỘI DUNG VÀ ĐƠN VỊ ĐỂ TÌM Ý KIẾN TRÙNG LẮP
+// ĐỐI CHIẾU NGUYÊN TẮC TÍNH TRÙNG:
+// PHẢI TRÙNG ĐỒNG THỜI:
+// 1. TÊN THÔN/BUÔN
+// 2. MẢNG LĨNH VỰC
+// 3. NỘI DUNG CHÍNH (ĐỊA DANH / CÔNG TRÌNH CỤ THỂ HOẶC CÙNG CỬ TRI GỬI LẶP LẠI)
+// CÁC TRƯỜNG HỢP KHÔNG TRÙNG ĐỒNG THỜI THÌ GHI "KHÔNG TRÙNG"
 const findDuplicateMatch = (target: FeedbackItem, allItems: FeedbackItem[]): FeedbackItem | null => {
   if (!target || !allItems || allItems.length === 0) return null;
 
-  const targetOrg = (target.officialResponse?.answeringOrg || getDefaultAnsweringOrg(target.category)).toLowerCase();
-  const targetKeywords = extractKeywords(target.content);
+  const targetVillageNorm = normalizeVi(target.village);
+  const targetCategoryNorm = normalizeVi(target.category);
   const targetNorm = normalizeVi(target.content);
-  const targetName = (target.voterName || "").trim().toLowerCase();
-  const targetVillage = (target.village || "").trim().toLowerCase();
+  const targetMainKeywords = extractMainKeywords(target.content);
+  const targetName = normalizeVi(target.voterName || "");
+
+  if (!targetVillageNorm || !targetCategoryNorm) return null;
 
   for (const other of allItems) {
     // Không đối chiếu với chính mình
     if (other.id === target.id || other.ticketCode === target.ticketCode) continue;
 
-    const otherOrg = (other.officialResponse?.answeringOrg || getDefaultAnsweringOrg(other.category)).toLowerCase();
-
-    // 1. Kiểm tra đơn vị / mảng phụ trách: trùng một phần đơn vị hoặc cùng mảng
-    const sameCategory = Boolean(target.category && other.category && target.category === other.category);
-    const sameOrg =
-      targetOrg === otherOrg ||
-      targetOrg.includes(otherOrg) ||
-      otherOrg.includes(targetOrg) ||
-      sameCategory;
-
-    if (!sameOrg) continue;
-
-    // 2. Kiểm tra trùng một phần nội dung
-    const otherKeywords = extractKeywords(other.content);
-    const otherNorm = normalizeVi(other.content);
-    const otherName = (other.voterName || "").trim().toLowerCase();
-    const otherVillage = (other.village || "").trim().toLowerCase();
-
-    // TH1: Cùng cử tri ở cùng thôn/buôn gửi phản ánh về cùng mảng/đơn vị
-    const isSameVoter = targetName && otherName && targetName === otherName && targetVillage === otherVillage;
-    if (isSameVoter) {
-      const commonWords = targetKeywords.filter((k) => otherKeywords.includes(k));
-      if (commonWords.length >= 2) return other;
+    // ĐIỀU KIỆN 1: BẮT BUỘC TRÙNG TÊN THÔN / BUÔN
+    const otherVillageNorm = normalizeVi(other.village);
+    if (!otherVillageNorm || targetVillageNorm !== otherVillageNorm) {
+      continue; // Khác thôn/buôn => Loại ngay
     }
 
-    // TH2: Có cụm từ chung dài >= 14 ký tự (ví dụ: "cay cau tai thon 13", "duong noi dong thon 8", v.v.)
+    // ĐIỀU KIỆN 2: BẮT BUỘC TRÙNG MẢNG LĨNH VỰC
+    const otherCategoryNorm = normalizeVi(other.category);
+    const sameCategory =
+      targetCategoryNorm === otherCategoryNorm ||
+      targetCategoryNorm.includes(otherCategoryNorm) ||
+      otherCategoryNorm.includes(targetCategoryNorm);
+
+    if (!sameCategory) {
+      continue; // Khác mảng => Loại ngay
+    }
+
+    // ĐIỀU KIỆN 3: BẮT BUỘC TRÙNG NỘI DUNG CHÍNH TRONG THÔN ĐÓ
+    const otherNorm = normalizeVi(other.content);
+    const otherMainKeywords = extractMainKeywords(other.content);
+    const otherName = normalizeVi(other.voterName || "");
+
+    // 3.1. Cùng cử tri ở trong thôn đó gửi lặp lại về cùng mảng và có từ khóa đặc trưng chung
+    const isSameVoter = targetName && otherName && targetName === otherName;
+    if (isSameVoter) {
+      const commonWords = targetMainKeywords.filter((k) => otherMainKeywords.includes(k));
+      if (commonWords.length >= 1) {
+        return other;
+      }
+    }
+
+    // 3.2. Cùng nói về một địa danh, công trình, vị trí cụ thể trong thôn (cụm từ liên tiếp có ý nghĩa >= 7 ký tự)
     const targetWords = targetNorm.split(" ").filter(Boolean);
-    let hasCommonPhrase = false;
-    for (let i = 0; i <= targetWords.length - 4; i++) {
-      const phrase = `${targetWords[i]} ${targetWords[i + 1]} ${targetWords[i + 2]} ${targetWords[i + 3]}`;
-      if (phrase.length >= 14 && otherNorm.includes(phrase)) {
-        hasCommonPhrase = true;
+    let hasSpecificPhrase = false;
+    for (let i = 0; i <= targetWords.length - 2; i++) {
+      const w1 = targetWords[i];
+      const w2 = targetWords[i + 1];
+      const bigram = `${w1} ${w2}`;
+      if (
+        (targetMainKeywords.includes(w1) || targetMainKeywords.includes(w2)) &&
+        bigram.length >= 7 &&
+        otherNorm.includes(bigram)
+      ) {
+        hasSpecificPhrase = true;
         break;
       }
     }
-    if (hasCommonPhrase) return other;
+    if (hasSpecificPhrase) {
+      return other;
+    }
 
-    // TH3: Trùng tập từ khóa cốt lõi (>= 3 từ khóa quan trọng và tỷ lệ overlap >= 0.25)
-    const commonWords = targetKeywords.filter((k) => otherKeywords.includes(k));
-    if (commonWords.length >= 3) {
-      const minLength = Math.min(targetKeywords.length, otherKeywords.length);
-      if (minLength > 0 && commonWords.length / minLength >= 0.25) {
-        return other;
-      }
+    // 3.3. Trùng ít nhất 2 từ khóa đặc trưng chính (địa danh, tên riêng, số hiệu...) trong cùng thôn
+    const commonMainWords = targetMainKeywords.filter((k) => otherMainKeywords.includes(k));
+    if (commonMainWords.length >= 2) {
+      return other;
     }
   }
 
@@ -525,6 +551,12 @@ export default function ReportExportModal({
           ? `Trùng với ý kiến của cử tri ${dupMatch.voterName || "Cử tri"} (${dupMatch.village || ""}) - Mã: ${dupMatch.ticketCode} | Đơn vị: ${dupMatch.officialResponse?.answeringOrg || getDefaultAnsweringOrg(dupMatch.category)} | Nội dung: "${dupMatch.content}"`
           : "Không trùng";
 
+        // Yêu cầu 1: Báo cáo các trường hợp chưa trả lời (reportScope === "UNANSWERED")
+        // tuyệt đối không tự đưa câu trả lời vào, để trống các cột trả lời
+        const answerContent = reportScope === "UNANSWERED" ? "" : (item.officialResponse?.responseContent || "");
+        const answeredAt = reportScope === "UNANSWERED" ? "" : (item.officialResponse?.answeredAt ? new Date(item.officialResponse.answeredAt).toLocaleDateString("vi-VN") : "");
+        const answeredBy = reportScope === "UNANSWERED" ? "" : (item.officialResponse?.answeredBy || "");
+
         detailRows.push([
           globalIndex++,
           item.category,
@@ -536,11 +568,9 @@ export default function ReportExportModal({
           new Date(item.createdAt).toLocaleDateString("vi-VN"),
           org,
           dupText,
-          item.officialResponse?.responseContent || "",
-          item.officialResponse?.answeredAt
-            ? new Date(item.officialResponse.answeredAt).toLocaleDateString("vi-VN")
-            : "",
-          item.officialResponse?.answeredBy || "",
+          answerContent,
+          answeredAt,
+          answeredBy,
         ]);
       });
     });
@@ -635,13 +665,17 @@ export default function ReportExportModal({
           const isAnswered = hasOfficialAnswer(item);
           const org = item.officialResponse?.answeringOrg || getDefaultAnsweringOrg(item.category);
           const dupMatch = findDuplicateMatch(item, allFeedbacks);
-          const answeredContent =
-            isAnswered && item.officialResponse?.responseContent
-              ? `<div style="margin-top: 4px; padding: 4px; background-color: #f0fdf4; border: 1px solid #bbf7d0; font-size: 9.5pt;">
-                  <strong>✓ Kết quả giải quyết của ${org}:</strong> ${item.officialResponse.responseContent}
-                 </div>`
-              : "";
 
+          // Yêu cầu 1: Không được tự bịa ra câu trả lời (phải do cán bộ nhập câu trả lời mới được thống kê,
+          // lưu ý các trường hợp trong báo cáo chưa trả lời đều chưa có văn bản trả lời)
+          const showAnswer = reportScope !== "UNANSWERED" && isAnswered && Boolean(item.officialResponse?.responseContent);
+          const answeredContent = showAnswer
+            ? `<div style="margin-top: 4px; padding: 4px; background-color: #f0fdf4; border: 1px solid #bbf7d0; font-size: 9.5pt;">
+                <strong>✓ Kết quả giải quyết của ${org}:</strong> ${item.officialResponse!.responseContent}
+               </div>`
+            : "";
+
+          // Yêu cầu 2: Các trường hợp không trùng đồng thời thì ghi "Không trùng"
           const dupWordHtml = dupMatch
             ? `<div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 5px; border-radius: 4px; font-size: 9.5pt; color: #991b1b; text-align: left;">
                 <div style="font-weight: bold; margin-bottom: 2px;">⚠️ Trùng với ý kiến của cử tri:</div>
@@ -650,7 +684,7 @@ export default function ReportExportModal({
                 <div>• <strong>Đơn vị:</strong> ${dupMatch.officialResponse?.answeringOrg || getDefaultAnsweringOrg(dupMatch.category)}</div>
                 <div style="margin-top: 2px;">• <strong>Nội dung:</strong> <em>"${dupMatch.content.length > 180 ? dupMatch.content.slice(0, 180) + '...' : dupMatch.content}"</em></div>
                </div>`
-            : `<span style="color: #64748b; font-size: 10pt;">-</span>`;
+            : `<span style="color: #64748b; font-size: 9.5pt;">Không trùng</span>`;
 
           return `
             <tr>
@@ -1539,6 +1573,9 @@ export default function ReportExportModal({
                           const org = item.officialResponse?.answeringOrg || getDefaultAnsweringOrg(item.category);
                           const dupMatch = findDuplicateMatch(item, allFeedbacks);
 
+                          // Yêu cầu 1: Không được tự bịa ra câu trả lời (các trường hợp trong báo cáo chưa trả lời đều chưa có văn bản trả lời)
+                          const showAnswer = reportScope !== "UNANSWERED" && isAnswered && Boolean(item.officialResponse?.responseContent);
+
                           return (
                             <tr key={item.id} className="hover:bg-slate-50/80">
                               {/* STT */}
@@ -1569,7 +1606,7 @@ export default function ReportExportModal({
                                 <div className="whitespace-pre-line text-xs font-medium">
                                   {item.content}
                                 </div>
-                                {isAnswered && item.officialResponse?.responseContent && (
+                                {showAnswer && item.officialResponse?.responseContent && (
                                   <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded text-[11px] text-emerald-900">
                                     <p className="font-bold text-emerald-800">
                                       ✓ Kết quả trả lời của {item.officialResponse.answeringOrg}:
@@ -1618,7 +1655,7 @@ export default function ReportExportModal({
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="text-slate-400 text-center py-2 text-xs font-mono">-</div>
+                                  <div className="text-slate-400 py-1 text-xs italic">Không trùng</div>
                                 )}
                               </td>
                             </tr>

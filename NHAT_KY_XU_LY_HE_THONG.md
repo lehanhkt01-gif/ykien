@@ -220,3 +220,17 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
      - Bảng xem trước trên Modal & Bản in A4.
      - Xuất văn bản Word (.doc) thể thức Thông tư 30 / Nghị định 30.
      - Xuất bảng tính Excel (.xlsx).
+
+---
+
+### 9. THIẾT LẬP LẠI BÁO CÁO THỐNG KÊ CÁC TRƯỜNG HỢP CHƯA TRẢ LỜI (02/11/2026)
+- **Tập tin tác động:** components/ReportExportModal.tsx
+- **Nội dung hoàn thiện theo chỉ đạo:**
+  1. **Tuyệt đối không tự bịa câu trả lời:**
+     - Trong chế độ báo cáo các trường hợp chưa trả lời (reportScope === 'UNANSWERED'), các trường hợp này đều chưa có văn bản trả lời công khai.
+     - Ẩn hoàn toàn khối 'Kết quả giải quyết' trong cột nội dung chi tiết ý kiến trên cả Giao diện Modal, Bản in A4, File Word (.doc) và để trống trong File Excel (.xlsx). Chỉ cán bộ nhập trả lời chính thức mới được thống kê hiển thị.
+  2. **Nguyên tắc tính trùng lặp chặt chẽ (phải trùng đồng thời 3 yếu tố):**
+     - Yếu tố 1: Trùng tên Thôn/Buôn (khác thôn/buôn là loại trừ ngay lập tức).
+     - Yếu tố 2: Trùng mảng/lĩnh vực phụ trách.
+     - Yếu tố 3: Trùng nội dung chính (cùng địa danh/vị trí/công trình cụ thể hoặc cùng một cử tri gửi lặp lại nhiều lần).
+     - Các trường hợp không trùng đồng thời thì ghi rõ 'Không trùng'.
