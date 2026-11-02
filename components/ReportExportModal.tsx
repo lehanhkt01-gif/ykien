@@ -91,6 +91,98 @@ const getDefaultAnsweringOrg = (category: string): string => {
   return "Ủy ban Nhân dân xã Ea Súp";
 };
 
+// Chuẩn hóa văn bản tiếng Việt để tìm cụm từ con
+const normalizeVi = (text: string): string => {
+  return (text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+// Trích xuất các từ khóa đặc trưng tiếng Việt (bỏ stop words thông dụng)
+const extractKeywords = (text: string): string[] => {
+  if (!text) return [];
+  const stopWords = new Set([
+    "xin", "chao", "gui", "loi", "kinh", "thua", "cac", "cap", "lanh", "dao",
+    "cung", "cu", "tri", "hoi", "nghi", "dai", "bieu", "nhan", "dan", "toi",
+    "chung", "la", "va", "cua", "co", "de", "thi", "ma", "nhung", "rat", "mong",
+    "cam", "on", "nay", "do", "duoc", "mot", "hai", "ba", "nhieu", "it", "khi",
+    "luc", "trong", "tren", "duoi", "ngoai", "vao", "ra", "ve", "tai", "cho",
+    "biet", "bao", "nam", "thang", "ngay", "hien", "qua", "lai", "len", "xuong"
+  ]);
+
+  const clean = normalizeVi(text);
+  const words = clean.split(" ").filter((w) => w.length >= 2 && !stopWords.has(w));
+  return Array.from(new Set(words));
+};
+
+// ĐỐI CHIẾU VỚI TỔNG THỂ TOÀN BỘ NỘI DUNG VÀ ĐƠN VỊ ĐỂ TÌM Ý KIẾN TRÙNG LẮP
+const findDuplicateMatch = (target: FeedbackItem, allItems: FeedbackItem[]): FeedbackItem | null => {
+  if (!target || !allItems || allItems.length === 0) return null;
+
+  const targetOrg = (target.officialResponse?.answeringOrg || getDefaultAnsweringOrg(target.category)).toLowerCase();
+  const targetKeywords = extractKeywords(target.content);
+  const targetNorm = normalizeVi(target.content);
+  const targetName = (target.voterName || "").trim().toLowerCase();
+  const targetVillage = (target.village || "").trim().toLowerCase();
+
+  for (const other of allItems) {
+    // Không đối chiếu với chính mình
+    if (other.id === target.id || other.ticketCode === target.ticketCode) continue;
+
+    const otherOrg = (other.officialResponse?.answeringOrg || getDefaultAnsweringOrg(other.category)).toLowerCase();
+
+    // 1. Kiểm tra đơn vị / mảng phụ trách: trùng một phần đơn vị hoặc cùng mảng
+    const sameCategory = Boolean(target.category && other.category && target.category === other.category);
+    const sameOrg =
+      targetOrg === otherOrg ||
+      targetOrg.includes(otherOrg) ||
+      otherOrg.includes(targetOrg) ||
+      sameCategory;
+
+    if (!sameOrg) continue;
+
+    // 2. Kiểm tra trùng một phần nội dung
+    const otherKeywords = extractKeywords(other.content);
+    const otherNorm = normalizeVi(other.content);
+    const otherName = (other.voterName || "").trim().toLowerCase();
+    const otherVillage = (other.village || "").trim().toLowerCase();
+
+    // TH1: Cùng cử tri ở cùng thôn/buôn gửi phản ánh về cùng mảng/đơn vị
+    const isSameVoter = targetName && otherName && targetName === otherName && targetVillage === otherVillage;
+    if (isSameVoter) {
+      const commonWords = targetKeywords.filter((k) => otherKeywords.includes(k));
+      if (commonWords.length >= 2) return other;
+    }
+
+    // TH2: Có cụm từ chung dài >= 14 ký tự (ví dụ: "cay cau tai thon 13", "duong noi dong thon 8", v.v.)
+    const targetWords = targetNorm.split(" ").filter(Boolean);
+    let hasCommonPhrase = false;
+    for (let i = 0; i <= targetWords.length - 4; i++) {
+      const phrase = `${targetWords[i]} ${targetWords[i + 1]} ${targetWords[i + 2]} ${targetWords[i + 3]}`;
+      if (phrase.length >= 14 && otherNorm.includes(phrase)) {
+        hasCommonPhrase = true;
+        break;
+      }
+    }
+    if (hasCommonPhrase) return other;
+
+    // TH3: Trùng tập từ khóa cốt lõi (>= 3 từ khóa quan trọng và tỷ lệ overlap >= 0.25)
+    const commonWords = targetKeywords.filter((k) => otherKeywords.includes(k));
+    if (commonWords.length >= 3) {
+      const minLength = Math.min(targetKeywords.length, otherKeywords.length);
+      if (minLength > 0 && commonWords.length / minLength >= 0.25) {
+        return other;
+      }
+    }
+  }
+
+  return null;
+};
+
 export default function ReportExportModal({
   isOpen,
   onClose,
@@ -387,6 +479,7 @@ export default function ReportExportModal({
     XLSX.utils.book_append_sheet(wb, wsSummary, "TongHop_TheoMang");
 
     // 2. SHEET 2: DANH SÁCH CHI TIẾT ĐƯỢC PHÂN THEO TỪNG MẢNG, NỘI DUNG CHI TIẾT, TÊN NGƯỜI Ý KIẾN, THÔN BUÔN
+    // 2. SHEET 2: DANH SÁCH CHI TIẾT ĐƯỢC PHÂN THEO TỪNG MẢNG, NỘI DUNG CHI TIẾT, TÊN NGƯỜI Ý KIẾN, THÔN BUÔN
     const detailHeaders = [
       "STT",
       "Mảng / Lĩnh vực",
@@ -396,8 +489,8 @@ export default function ReportExportModal({
       "Số điện thoại",
       "Nội dung chi tiết của ý kiến cử tri",
       "Ngày tiếp nhận",
-      "Tình trạng xác minh / xử lý",
-      "Đơn vị chủ trì xác minh",
+      "Mảng phụ trách",
+      "Trùng lắp ý kiến",
       "Nội dung trả lời (nếu có)",
       "Ngày trả lời",
       "Người ký trả lời",
@@ -426,12 +519,11 @@ export default function ReportExportModal({
       ]);
 
       itemsInCategory.forEach((item) => {
-        const isAnswered = hasOfficialAnswer(item);
-        const processingStatus = isAnswered
-          ? "Đã trả lời công khai"
-          : item.status === "Đang xác minh, xử lý" || item.status === "Đang xử lý"
-          ? "Đang xác minh, xử lý"
-          : "Chờ tiếp nhận phân loại";
+        const org = item.officialResponse?.answeringOrg || getDefaultAnsweringOrg(item.category);
+        const dupMatch = findDuplicateMatch(item, allFeedbacks);
+        const dupText = dupMatch
+          ? `Trùng với ý kiến của cử tri ${dupMatch.voterName || "Cử tri"} (${dupMatch.village || ""}) - Mã: ${dupMatch.ticketCode} | Đơn vị: ${dupMatch.officialResponse?.answeringOrg || getDefaultAnsweringOrg(dupMatch.category)} | Nội dung: "${dupMatch.content}"`
+          : "Không trùng";
 
         detailRows.push([
           globalIndex++,
@@ -442,8 +534,8 @@ export default function ReportExportModal({
           item.phone || "",
           item.content,
           new Date(item.createdAt).toLocaleDateString("vi-VN"),
-          processingStatus,
-          item.officialResponse?.answeringOrg || getDefaultAnsweringOrg(item.category),
+          org,
+          dupText,
           item.officialResponse?.responseContent || "",
           item.officialResponse?.answeredAt
             ? new Date(item.officialResponse.answeredAt).toLocaleDateString("vi-VN")
@@ -456,15 +548,15 @@ export default function ReportExportModal({
     const wsDetail = XLSX.utils.aoa_to_sheet([detailHeaders, ...detailRows]);
     wsDetail["!cols"] = [
       { wch: 6 },
-      { wch: 32 },
+      { wch: 30 },
       { wch: 18 },
       { wch: 22 },
       { wch: 18 },
       { wch: 14 },
       { wch: 55 },
       { wch: 14 },
-      { wch: 24 },
       { wch: 38 },
+      { wch: 60 },
       { wch: 45 },
       { wch: 14 },
       { wch: 20 },
@@ -541,38 +633,46 @@ export default function ReportExportModal({
       const itemsHtml = itemsInCategory
         .map((item, idx) => {
           const isAnswered = hasOfficialAnswer(item);
-          const processingStatus = isAnswered
-            ? "Đã có văn bản trả lời"
-            : "Đang xác minh, xử lý";
           const org = item.officialResponse?.answeringOrg || getDefaultAnsweringOrg(item.category);
+          const dupMatch = findDuplicateMatch(item, allFeedbacks);
           const answeredContent =
             isAnswered && item.officialResponse?.responseContent
-              ? `<div style="margin-top: 4px; padding: 4px; background-color: #f0fdf4; border: 1px solid #bbf7d0; font-size: 10pt;">
+              ? `<div style="margin-top: 4px; padding: 4px; background-color: #f0fdf4; border: 1px solid #bbf7d0; font-size: 9.5pt;">
                   <strong>✓ Kết quả giải quyết của ${org}:</strong> ${item.officialResponse.responseContent}
                  </div>`
               : "";
 
+          const dupWordHtml = dupMatch
+            ? `<div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 5px; border-radius: 4px; font-size: 9.5pt; color: #991b1b; text-align: left;">
+                <div style="font-weight: bold; margin-bottom: 2px;">⚠️ Trùng với ý kiến của cử tri:</div>
+                <div>• <strong>Họ tên:</strong> ${dupMatch.voterName || "Cử tri"} (${dupMatch.village || ""})</div>
+                <div>• <strong>Mã:</strong> ${dupMatch.ticketCode}</div>
+                <div>• <strong>Đơn vị:</strong> ${dupMatch.officialResponse?.answeringOrg || getDefaultAnsweringOrg(dupMatch.category)}</div>
+                <div style="margin-top: 2px;">• <strong>Nội dung:</strong> <em>"${dupMatch.content.length > 180 ? dupMatch.content.slice(0, 180) + '...' : dupMatch.content}"</em></div>
+               </div>`
+            : `<span style="color: #64748b; font-size: 10pt;">-</span>`;
+
           return `
             <tr>
-              <td align="center" valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">${idx + 1}</td>
-              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">
+              <td align="center" valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 10pt;">${idx + 1}</td>
+              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 10pt;">
                 <strong>${item.voterName || "Cử tri Ea Súp"}</strong><br/>
                 <span>Địa bàn: <strong>${item.village}</strong></span><br/>
-                ${item.phone ? `<span style="font-size: 10pt; color: #444;">SĐT: ${item.phone}</span><br/>` : ""}
-                <span style="font-size: 9.5pt; color: #666;">Mã: ${item.ticketCode}</span>
+                ${item.phone ? `<span style="font-size: 9.5pt; color: #444;">SĐT: ${item.phone}</span><br/>` : ""}
+                <span style="font-size: 9pt; color: #666;">Mã: ${item.ticketCode}</span>
               </td>
-              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt; text-align: justify;">
+              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 10pt; text-align: justify;">
                 ${item.content}
                 ${answeredContent}
               </td>
-              <td align="center" valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt; white-space: nowrap;">
+              <td align="center" valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 10pt; white-space: nowrap;">
                 ${new Date(item.createdAt).toLocaleDateString("vi-VN")}
               </td>
-              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">
-                <span style="font-weight: bold; color: ${isAnswered ? "#166534" : "#92400e"};">
-                  ${processingStatus}
-                </span><br/>
-                <span style="font-size: 10pt; color: #333;">${org}</span>
+              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 10pt;">
+                <strong>${org}</strong>
+              </td>
+              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 9.5pt;">
+                ${dupWordHtml}
               </td>
             </tr>`;
         })
@@ -586,11 +686,12 @@ export default function ReportExportModal({
           <table width="100%" border="1" cellspacing="0" cellpadding="5" style="border-collapse: collapse; border: 1px solid black; width: 100%;">
             <thead>
               <tr style="background-color: #f2f2f2;">
-                <th width="5%" align="center" style="border: 1px solid black; padding: 6px; font-size: 11pt;">STT</th>
-                <th width="24%" align="left" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Người ý kiến & Thôn/Buôn</th>
-                <th width="43%" align="left" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Nội dung chi tiết của ý kiến cử tri</th>
-                <th width="11%" align="center" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Ngày nhận</th>
-                <th width="17%" align="left" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Đơn vị & Tình trạng xác minh</th>
+                <th width="4%" align="center" style="border: 1px solid black; padding: 6px; font-size: 10pt;">STT</th>
+                <th width="18%" align="left" style="border: 1px solid black; padding: 6px; font-size: 10pt;">Người ý kiến & Thôn/Buôn</th>
+                <th width="32%" align="left" style="border: 1px solid black; padding: 6px; font-size: 10pt;">Nội dung chi tiết của ý kiến cử tri</th>
+                <th width="10%" align="center" style="border: 1px solid black; padding: 6px; font-size: 10pt;">Ngày nhận</th>
+                <th width="16%" align="left" style="border: 1px solid black; padding: 6px; font-size: 10pt;">Mảng phụ trách</th>
+                <th width="20%" align="left" style="border: 1px solid black; padding: 6px; font-size: 10pt;">Trùng lắp ý kiến</th>
               </tr>
             </thead>
             <tbody>
@@ -1414,28 +1515,34 @@ export default function ReportExportModal({
                     <table className="min-w-full divide-y divide-slate-200 text-xs border border-slate-200">
                       <thead className="bg-slate-100 text-slate-800 font-bold">
                         <tr>
-                          <th className="px-2.5 py-2 text-center w-10 border-r border-slate-200">STT</th>
-                          <th className="px-3 py-2 text-left w-44 border-r border-slate-200">
+                          <th className="px-2 py-2 text-center w-9 border-r border-slate-200">STT</th>
+                          <th className="px-3 py-2 text-left w-40 border-r border-slate-200">
                             Người ý kiến & Thôn/Buôn
                           </th>
                           <th className="px-3 py-2 text-left border-r border-slate-200">
                             Nội dung chi tiết của ý kiến cử tri
                           </th>
-                          <th className="px-2.5 py-2 text-center w-24 border-r border-slate-200">
+                          <th className="px-2 py-2 text-center w-20 border-r border-slate-200">
                             Ngày nhận
                           </th>
-                          <th className="px-3 py-2 text-left w-48">
-                            Đơn vị & Tình trạng xác minh
+                          <th className="px-3 py-2 text-left w-36 border-r border-slate-200">
+                            Mảng phụ trách
+                          </th>
+                          <th className="px-3 py-2 text-left w-52">
+                            Trùng lắp ý kiến
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
                         {itemsInCategory.map((item, idx) => {
                           const isAnswered = hasOfficialAnswer(item);
+                          const org = item.officialResponse?.answeringOrg || getDefaultAnsweringOrg(item.category);
+                          const dupMatch = findDuplicateMatch(item, allFeedbacks);
+
                           return (
                             <tr key={item.id} className="hover:bg-slate-50/80">
                               {/* STT */}
-                              <td className="px-2.5 py-2.5 text-center font-bold text-slate-600 border-r border-slate-200 align-top">
+                              <td className="px-2 py-2.5 text-center font-bold text-slate-600 border-r border-slate-200 align-top">
                                 {idx + 1}
                               </td>
 
@@ -1473,28 +1580,46 @@ export default function ReportExportModal({
                               </td>
 
                               {/* NGÀY TIẾP NHẬN */}
-                              <td className="px-2.5 py-2.5 text-center text-slate-600 text-[11px] border-r border-slate-200 align-top whitespace-nowrap">
+                              <td className="px-2 py-2.5 text-center text-slate-600 text-[11px] border-r border-slate-200 align-top whitespace-nowrap">
                                 {new Date(item.createdAt).toLocaleDateString("vi-VN")}
                               </td>
 
-                              {/* ĐƠN VỊ & TÌNH TRẠNG XÁC MINH XỬ LÝ */}
-                              <td className="px-3 py-2.5 align-top text-xs">
-                                <div className="mb-1">
-                                  <span
-                                    className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${
-                                      isAnswered
-                                        ? "bg-emerald-100 text-emerald-800"
-                                        : "bg-amber-100 text-amber-900 border border-amber-300"
-                                    }`}
-                                  >
-                                    {isAnswered
-                                      ? "Đã có văn bản trả lời"
-                                      : "Đang xác minh, xử lý"}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-slate-700 font-medium">
-                                  {item.officialResponse?.answeringOrg || getDefaultAnsweringOrg(item.category)}
+                              {/* MẢNG PHỤ TRÁCH (KHÔNG ĐƯA TÌNH TRẠNG XÁC MINH VÀO) */}
+                              <td className="px-3 py-2.5 align-top text-xs border-r border-slate-200">
+                                <p className="text-[11px] text-slate-800 font-semibold leading-snug">
+                                  {org}
                                 </p>
+                              </td>
+
+                              {/* TRÙNG LẮP Ý KIẾN */}
+                              <td className="px-3 py-2.5 align-top text-xs">
+                                {dupMatch ? (
+                                  <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg text-[11px] text-rose-950 space-y-1">
+                                    <div className="font-bold text-rose-800 flex items-center gap-1">
+                                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                      <span>Trùng với ý kiến của cử tri:</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-semibold text-rose-900">{dupMatch.voterName || "Cử tri"}</span>
+                                      <span className="text-slate-600"> ({dupMatch.village})</span>
+                                      <span className="text-rose-700 font-mono text-[10px] ml-1">[{dupMatch.ticketCode}]</span>
+                                    </div>
+                                    <div>
+                                      <span className="font-semibold text-slate-700">Đơn vị: </span>
+                                      <span className="text-slate-800">
+                                        {dupMatch.officialResponse?.answeringOrg || getDefaultAnsweringOrg(dupMatch.category)}
+                                      </span>
+                                    </div>
+                                    <div className="text-slate-700 leading-relaxed border-t border-rose-200/60 pt-1 mt-1">
+                                      <span className="font-semibold text-slate-800">Nội dung: </span>
+                                      <span className="italic">
+                                        "{dupMatch.content.length > 180 ? dupMatch.content.slice(0, 180) + "..." : dupMatch.content}"
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-slate-400 text-center py-2 text-xs font-mono">-</div>
+                                )}
                               </td>
                             </tr>
                           );

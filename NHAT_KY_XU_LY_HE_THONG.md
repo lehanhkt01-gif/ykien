@@ -203,3 +203,20 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
 
 
 
+
+---
+
+### 8. ĐIỀU CHỈNH CỘT BÁO CÁO: ĐỔI 'MẢNG PHỤ TRÁCH' VÀ BỔ SUNG CỘT 'TRÙNG LẮP Ý KIẾN' (02/11/2026)
+- **Tập tin tác động:** components/ReportExportModal.tsx
+- **Nội dung thực hiện:**
+  1. **Đổi cột 'Đơn vị & Tình trạng xác minh' thành 'Mảng phụ trách':**
+     - Hiển thị đơn vị/mảng phụ trách của ý kiến (ví dụ: Bộ phận Giao thông - Thủy lợi - Xây dựng / UBND xã Ea Súp).
+     - Bỏ hiển thị tình trạng xác minh ('Đang xác minh, xử lý') theo đúng yêu cầu.
+  2. **Bổ sung cột 'Trùng lắp ý kiến':**
+     - Tự động đối chiếu với tổng thể toàn bộ nội dung và đơn vị trên hệ thống (allFeedbacks).
+     - Khi phát hiện trùng một phần nội dung và đơn vị: hiển thị chi tiết tên cử tri trùng, thôn/buôn, mã hồ sơ, đơn vị phụ trách và nội dung ý kiến trùng.
+     - Nếu không trùng: hiển thị dấu '-' gọn gàng.
+  3. **Đồng bộ trên cả 3 phương thức:**
+     - Bảng xem trước trên Modal & Bản in A4.
+     - Xuất văn bản Word (.doc) thể thức Thông tư 30 / Nghị định 30.
+     - Xuất bảng tính Excel (.xlsx).
