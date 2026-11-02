@@ -981,7 +981,7 @@ export async function getFeedbackStats(isAdmin: boolean = false) {
       const total = await prisma.voterFeedback.count();
       const pendingApproval = await prisma.voterFeedback.count({
         where: {
-          OR: [{ status: "Chờ duyệt" }, { isApproved: false }],
+          OR: [{ status: "Chờ duyệt" }, { status: "Chưa duyệt" }],
         },
       });
       const answered = await prisma.voterFeedback.count({
