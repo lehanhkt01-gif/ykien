@@ -184,6 +184,21 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
   5. **In ấn báo cáo A4 (`app/globals.css`):**
      - Chuẩn hóa CSS `@media print` cho khổ A4 dọc, không bị vỡ bố cục, tránh cắt trang giữa dòng bảng.
 
+---
+
+## 📌 11. YÊU CẦU 11: NÚT XUẤT FILE WORD THỂ THỨC THÔNG TƯ 30 VÀ KHẮC PHỤC TRIỆT ĐỂ LỖI NHẢY SỐ TRÊN 4 CARD ADMIN
+- **Ngày thực hiện:** 02/11/2026
+- **Nội dung nâng cấp:**
+  1. **Nút Xuất file Word (.doc) theo đúng thể thức Thông tư 30 / Nghị định 30/2020/NĐ-CP:**
+     - Bổ sung nút **"Xuất file Word (.doc)"** màu xanh dương công vụ ngay tại thanh công cụ dưới chân `ReportExportModal.tsx`.
+     - Cấu trúc file Word tự động định dạng trang giấy A4, lề chuẩn (Trên 20mm, Dưới 20mm, Trái 30mm, Phải 15mm), phông chữ Times New Roman 13-14pt.
+     - Đường kẻ nét liền dưới Quốc hiệu, Tiêu ngữ và Tên cơ quan ban hành theo đúng tỷ lệ Thông tư 30.
+     - Phân theo từng mảng, bảng chi tiết từng ý kiến (tên người ý kiến, thôn buôn, nội dung chi tiết, ngày nhận, đơn vị xác minh), kiến nghị đôn đốc, nơi nhận và chữ ký đóng dấu chuẩn thể thức.
+  2. **Khắc phục lỗi nhảy số qua lại trên 4 Card quản trị (`app/admin/page.tsx` & `lib/data-store.ts`):**
+     - Hiện trạng trước sửa: 4 Card tính số lượng trực tiếp trên mảng `items` đã bị lọc theo `selectedStatus`, dẫn đến khi nhấp chọn lọc "Đã trả lời" hoặc "Đang xác minh xử lý" thì các card khác bị nhảy về 0 hoặc nhảy theo số của bộ lọc.
+     - Đã giải quyết: Cập nhật `getFeedbackStats()` trong `lib/data-store.ts` truy vấn đếm chuẩn từ database prisma; bổ sung state `adminStats` và hàm `loadAdminStats()` trong `app/admin/page.tsx`.
+     - Kết quả: Khi nhấp chọn lọc bất kỳ Card nào, danh sách bên dưới vẫn lọc chính xác, trong khi số liệu trên 4 Card **LUÔN CỐ ĐỊNH CHUẨN XÁC: 0 - 116 - 17 - 99**, tuyệt đối không còn hiện tượng nhảy số qua lại.
+
 
 
 

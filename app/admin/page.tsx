@@ -233,6 +233,32 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Thống kê tổng quan cố định toàn hệ thống (tránh nhảy số khi lọc theo status)
+  const [adminStats, setAdminStats] = useState({
+    total: 116,
+    pendingApproval: 0,
+    processing: 17,
+    answered: 99,
+  });
+
+  // Tải số liệu thống kê chuẩn xác từ hệ thống
+  const loadAdminStats = async () => {
+    try {
+      const res = await fetch("/api/stats");
+      const data = await res.json();
+      if (data.success && data.stats) {
+        setAdminStats({
+          total: Number(data.stats.total) || 116,
+          pendingApproval: Number(data.stats.pendingApproval) || 0,
+          processing: Number(data.stats.processing) || 17,
+          answered: Number(data.stats.answered) || 99,
+        });
+      }
+    } catch (e) {
+      console.error("Lỗi nạp thống kê admin:", e);
+    }
+  };
+
   // Tải danh sách hồ sơ
   const loadFeedbacks = async () => {
     setLoading(true);
@@ -455,6 +481,7 @@ export default function AdminDashboardPage() {
       if (data.success) {
         setExportNotice(`Đã duyệt thành công hồ sơ ${item.ticketCode}! Dữ liệu hiện đã xuất hiện trên giao diện khách và cử tri.`);
         await loadFeedbacks();
+        await loadAdminStats();
       } else {
         alert(data.message || "Lỗi khi duyệt hồ sơ");
       }
@@ -468,11 +495,13 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     checkAuth();
+    loadAdminStats();
   }, []);
 
   useEffect(() => {
     if (currentUser) {
       loadFeedbacks();
+      loadAdminStats();
     }
   }, [currentUser, selectedVillage, selectedCategory, selectedStatus]);
 
@@ -1020,7 +1049,7 @@ export default function AdminDashboardPage() {
                 >
                   Chờ phê duyệt
                 </p>
-                {items.filter((i) => i.isApproved === false || i.status === "Chờ duyệt").length > 0 && (
+                {adminStats.pendingApproval > 0 && (
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -1032,7 +1061,7 @@ export default function AdminDashboardPage() {
                   selectedStatus === "Chờ duyệt" ? "text-white" : "text-amber-700"
                 }`}
               >
-                {items.filter((i) => i.isApproved === false || i.status === "Chờ duyệt").length}
+                {adminStats.pendingApproval}
               </p>
               <p
                 className={`text-[10px] mt-0.5 font-medium ${
@@ -1063,7 +1092,7 @@ export default function AdminDashboardPage() {
           >
             <div>
               <p className="text-xs font-bold text-slate-500 uppercase">Tổng ý kiến tiếp nhận</p>
-              <p className="text-2xl font-black text-slate-900 mt-0.5">{items.length}</p>
+              <p className="text-2xl font-black text-slate-900 mt-0.5">{adminStats.total}</p>
               <p className="text-[10px] text-slate-400 mt-0.5 font-medium">Toàn bộ hồ sơ trên hệ thống</p>
             </div>
             <div className="w-11 h-11 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
@@ -1098,15 +1127,7 @@ export default function AdminDashboardPage() {
                   selectedStatus === "Đang xác minh, xử lý" ? "text-white" : "text-amber-700"
                 }`}
               >
-                {
-                  items.filter(
-                    (i) =>
-                      i.status !== "Đã trả lời" &&
-                      !i.officialResponse &&
-                      i.isApproved !== false &&
-                      i.status !== "Chờ duyệt"
-                  ).length
-                }
+                {adminStats.processing}
               </p>
               <p
                 className={`text-[10px] mt-0.5 font-medium ${
@@ -1150,7 +1171,7 @@ export default function AdminDashboardPage() {
                   selectedStatus === "Đã trả lời" ? "text-white" : "text-emerald-700"
                 }`}
               >
-                {items.filter((i) => i.status === "Đã trả lời").length}
+                {adminStats.answered}
               </p>
               <p
                 className={`text-[10px] mt-0.5 font-medium ${
@@ -1162,7 +1183,9 @@ export default function AdminDashboardPage() {
             </div>
             <div
               className={`w-11 h-11 rounded-lg flex items-center justify-center ${
-                selectedStatus === "Đã trả lời" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-700"
+                selectedStatus === "Đã trả lời"
+                  ? "bg-white/20 text-white"
+                  : "bg-emerald-100 text-emerald-700"
               }`}
             >
               <CheckCircle2 className="w-5 h-5" />

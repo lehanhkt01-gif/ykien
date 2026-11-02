@@ -501,6 +501,289 @@ export default function ReportExportModal({
     }
   };
 
+  // ==============================================================
+  // XUẤT FILE WORD (.DOC) ĐÚNG THỂ THỨC THÔNG TƯ 30 / NGHỊ ĐỊNH 30 CỦA CHÍNH PHỦ
+  // ==============================================================
+  const handleExportWord = () => {
+    const isUnansweredMode = reportScope === "UNANSWERED";
+    const reportTitle = isUnansweredMode
+      ? "BÁO CÁO TỔNG HỢP CÁC Ý KIẾN, KIẾN NGHỊ CỦA CỬ TRI CHƯA ĐƯỢC TRẢ LỜI CÔNG KHAI"
+      : reportScope === "ANSWERED"
+      ? "BÁO CÁO KẾT QUẢ GIẢI QUYẾT VÀ TRẢ LỜI CÔNG KHAI Ý KIẾN CỬ TRI"
+      : "BÁO CÁO TỔNG HỢP KẾT QUẢ TIẾP NHẬN, GIẢI QUYẾT VÀ ĐÁNH GIÁ Ý KIẾN CỬ TRI";
+
+    const subTitle = isUnansweredMode
+      ? "(Hiện đang trong quá trình thẩm tra, xác minh và xử lý)"
+      : "";
+
+    const currentDate = new Date();
+    const day = currentDate.getDate();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+
+    // Sinh HTML các dòng bảng tổng hợp theo mảng
+    const summaryRowsHtml = activeCategorySummary
+      .map(
+        (c) => `
+        <tr>
+          <td align="center" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">${c.index}</td>
+          <td style="border: 1px solid black; padding: 5px 6px; font-size: 11pt; font-weight: bold;">${c.category}</td>
+          <td align="center" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt; font-weight: bold; color: #990000;">${c.count}</td>
+          <td align="center" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">${c.pct}%</td>
+          <td style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">${c.answeringOrg}</td>
+        </tr>`
+      )
+      .join("");
+
+    // Sinh HTML các mảng chi tiết
+    let detailSectionsHtml = "";
+    groupedFeedbacksByCategory.forEach(([categoryName, itemsInCategory], mIdx) => {
+      const itemsHtml = itemsInCategory
+        .map((item, idx) => {
+          const isAnswered = hasOfficialAnswer(item);
+          const processingStatus = isAnswered
+            ? "Đã có văn bản trả lời"
+            : "Đang xác minh, xử lý";
+          const org = item.officialResponse?.answeringOrg || getDefaultAnsweringOrg(item.category);
+          const answeredContent =
+            isAnswered && item.officialResponse?.responseContent
+              ? `<div style="margin-top: 4px; padding: 4px; background-color: #f0fdf4; border: 1px solid #bbf7d0; font-size: 10pt;">
+                  <strong>✓ Kết quả giải quyết của ${org}:</strong> ${item.officialResponse.responseContent}
+                 </div>`
+              : "";
+
+          return `
+            <tr>
+              <td align="center" valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">${idx + 1}</td>
+              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">
+                <strong>${item.voterName || "Cử tri Ea Súp"}</strong><br/>
+                <span>Địa bàn: <strong>${item.village}</strong></span><br/>
+                ${item.phone ? `<span style="font-size: 10pt; color: #444;">SĐT: ${item.phone}</span><br/>` : ""}
+                <span style="font-size: 9.5pt; color: #666;">Mã: ${item.ticketCode}</span>
+              </td>
+              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt; text-align: justify;">
+                ${item.content}
+                ${answeredContent}
+              </td>
+              <td align="center" valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt; white-space: nowrap;">
+                ${new Date(item.createdAt).toLocaleDateString("vi-VN")}
+              </td>
+              <td valign="top" style="border: 1px solid black; padding: 5px 6px; font-size: 11pt;">
+                <span style="font-weight: bold; color: ${isAnswered ? "#166534" : "#92400e"};">
+                  ${processingStatus}
+                </span><br/>
+                <span style="font-size: 10pt; color: #333;">${org}</span>
+              </td>
+            </tr>`;
+        })
+        .join("");
+
+      detailSectionsHtml += `
+        <div style="margin-top: 14pt; margin-bottom: 8pt; page-break-inside: avoid;">
+          <p style="margin: 6pt 0 4pt 0; font-weight: bold; font-size: 12pt; text-transform: uppercase;">
+            MẢNG ${toRoman(mIdx + 1)}: ${categoryName} (Gồm ${itemsInCategory.length} ý kiến)
+          </p>
+          <table width="100%" border="1" cellspacing="0" cellpadding="5" style="border-collapse: collapse; border: 1px solid black; width: 100%;">
+            <thead>
+              <tr style="background-color: #f2f2f2;">
+                <th width="5%" align="center" style="border: 1px solid black; padding: 6px; font-size: 11pt;">STT</th>
+                <th width="24%" align="left" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Người ý kiến & Thôn/Buôn</th>
+                <th width="43%" align="left" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Nội dung chi tiết của ý kiến cử tri</th>
+                <th width="11%" align="center" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Ngày nhận</th>
+                <th width="17%" align="left" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Đơn vị & Tình trạng xác minh</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHtml}
+            </tbody>
+          </table>
+        </div>`;
+    });
+
+    const wordContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>${reportTitle}</title>
+        <!--[if gte mso 9]>
+        <xml>
+        <w:WordDocument>
+          <w:View>Print</w:View>
+          <w:Zoom>100</w:Zoom>
+          <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          @page WordSection1 {
+            size: 595.3pt 841.9pt; /* A4 */
+            margin: 20mm 15mm 20mm 25mm; /* Chuẩn thể thức văn bản Nghị định 30/2020/NĐ-CP */
+            mso-header-margin: 36.0pt;
+            mso-footer-margin: 36.0pt;
+            mso-paper-source: 0;
+          }
+          div.WordSection1 { page: WordSection1; }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 13pt;
+            line-height: 1.35;
+            color: #000000;
+          }
+          table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+          p { margin-top: 0; margin-bottom: 6pt; }
+        </style>
+      </head>
+      <body>
+        <div class="WordSection1">
+          <!-- QUỐC HIỆU & TIÊU NGỮ THEO CHUẨN THỂ THỨC NGHỊ ĐỊNH 30/2020/NĐ-CP -->
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 12pt;">
+            <tr>
+              <td width="43%" align="center" valign="top">
+                <p style="margin: 0; font-size: 12pt; text-transform: uppercase;">ỦY BAN MTTQ VIỆT NAM XÃ EA SÚP</p>
+                <p style="margin: 0; font-size: 12pt; font-weight: bold; text-transform: uppercase;">BAN THƯỜNG TRỰC</p>
+                <div style="border-bottom: 1.5pt solid black; width: 40%; margin: 2pt auto 4pt auto;"></div>
+                <p style="margin: 0; font-size: 11pt;">Số: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/BC-MTTQ-BTT</p>
+              </td>
+              <td width="57%" align="center" valign="top">
+                <p style="margin: 0; font-size: 12pt; font-weight: bold; text-transform: uppercase;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+                <p style="margin: 0; font-size: 13pt; font-weight: bold;">Độc lập - Tự do - Hạnh phúc</p>
+                <div style="border-bottom: 1.5pt solid black; width: 65%; margin: 2pt auto 4pt auto;"></div>
+                <p style="margin: 0; font-size: 12pt; font-style: italic;">Ea Súp, ngày ${day} tháng ${month} năm ${year}</p>
+              </td>
+            </tr>
+          </table>
+
+          <!-- TIÊU ĐỀ BÁO CÁO -->
+          <p style="margin-top: 14pt; margin-bottom: 3pt; text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase;">
+            BÁO CÁO
+          </p>
+          <p style="margin-top: 0; margin-bottom: 3pt; text-align: center; font-size: 13pt; font-weight: bold; text-transform: uppercase;">
+            ${reportTitle}
+          </p>
+          ${subTitle ? `<p style="margin-top: 0; margin-bottom: 3pt; text-align: center; font-size: 12pt; font-weight: bold; font-style: italic;">${subTitle}</p>` : ""}
+          <p style="margin-top: 0; margin-bottom: 14pt; text-align: center; font-size: 12pt; font-weight: bold; color: #b91c1c;">
+            KỲ BÁO CÁO: ${periodLabel.toUpperCase()}
+          </p>
+
+          <!-- NƠI GỬI (KÍNH GỬI) -->
+          <p style="margin-bottom: 2pt;"><strong>Kính gửi:</strong></p>
+          <p style="margin: 0 0 2pt 20pt;">- Thường trực Đảng ủy xã Ea Súp;</p>
+          <p style="margin: 0 0 2pt 20pt;">- Thường trực Hội đồng nhân dân xã Ea Súp;</p>
+          <p style="margin: 0 0 10pt 20pt;">- Ủy ban nhân dân xã Ea Súp.</p>
+
+          <!-- LỜI MỞ ĐẦU HÀNH CHÍNH CÔNG VỤ -->
+          <p style="text-align: justify; text-indent: 20pt; line-height: 1.35; margin-bottom: 10pt;">
+            Thực hiện chức năng đại diện, bảo vệ quyền và lợi ích hợp pháp, chính đáng của cử tri và Nhân dân; căn cứ Quy chế phối hợp công tác giữa Ban Thường trực Ủy ban MTTQ Việt Nam xã với Thường trực HĐND và UBND xã Ea Súp; Ban Thường trực Ủy ban MTTQ Việt Nam xã Ea Súp báo cáo tổng hợp danh sách các ý kiến, kiến nghị của cử tri trên địa bàn xã ${
+              isUnansweredMode
+                ? "<strong>chưa được ban hành văn bản trả lời công khai</strong> (hiện đang trong quá trình chuyển các cơ quan, đơn vị chuyên môn thẩm tra, xác minh và xử lý)"
+                : ""
+            } nhằm phục vụ công tác giám sát, đôn đốc giải quyết, cụ thể như sau:
+          </p>
+
+          <!-- I. TỔNG QUAN TÌNH HÌNH TIẾP NHẬN -->
+          <p style="font-weight: bold; font-size: 13pt; margin-top: 10pt; margin-bottom: 6pt;">
+            I. TÌNH HÌNH TIẾP NHẬN VÀ GIẢI QUYẾT Ý KIẾN CỬ TRI TRONG KỲ:
+          </p>
+          <p style="text-align: justify; text-indent: 20pt; margin-bottom: 4pt;">
+            - Tổng số ý kiến tiếp nhận trong kỳ báo cáo: <strong>${stats.total}</strong> ý kiến.
+          </p>
+          <p style="text-align: justify; text-indent: 20pt; margin-bottom: 4pt;">
+            - Số ý kiến đã ban hành văn bản trả lời công khai: <strong>${stats.answered}</strong> ý kiến (đạt tỷ lệ <strong>${stats.resolutionRate}%</strong>).
+          </p>
+          <p style="text-align: justify; text-indent: 20pt; margin-bottom: 8pt;">
+            - Số ý kiến chưa được trả lời công khai (đang xác minh, xử lý): <strong>${stats.unanswered}</strong> ý kiến (chiếm tỷ lệ <strong>${stats.unansweredRate}%</strong>).
+          </p>
+
+          <!-- BẢNG TỔNG HỢP THEO MẢNG -->
+          <p style="font-weight: bold; font-size: 12pt; margin-top: 8pt; margin-bottom: 4pt;">
+            * Cơ cấu phân bố theo từng mảng lĩnh vực:
+          </p>
+          <table width="100%" border="1" cellspacing="0" cellpadding="5" style="border-collapse: collapse; border: 1px solid black; width: 100%; margin-bottom: 12pt;">
+            <thead>
+              <tr style="background-color: #f2f2f2;">
+                <th width="8%" align="center" style="border: 1px solid black; padding: 6px; font-size: 11pt;">STT</th>
+                <th width="42%" align="left" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Mảng / Lĩnh vực phản ánh</th>
+                <th width="15%" align="center" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Số lượng ý kiến</th>
+                <th width="12%" align="center" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Tỷ lệ (%)</th>
+                <th width="23%" align="left" style="border: 1px solid black; padding: 6px; font-size: 11pt;">Đơn vị chủ trì xác minh</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${summaryRowsHtml}
+            </tbody>
+          </table>
+
+          <!-- II. BÁO CÁO CHI TIẾT NỘI DUNG Ý KIẾN PHÂN THEO TỪNG MẢNG -->
+          <p style="font-weight: bold; font-size: 13pt; margin-top: 14pt; margin-bottom: 6pt;">
+            II. NỘI DUNG CHI TIẾT CÁC Ý KIẾN CỬ TRI ĐƯỢC PHÂN THEO TỪNG MẢNG (${finalFeedbacks.length} HỒ SƠ):
+          </p>
+          ${detailSectionsHtml}
+
+          <!-- III. KIẾN NGHỊ ĐÔN ĐỐC CỦA BAN THƯỜNG TRỰC UB MTTQ XÃ -->
+          <p style="font-weight: bold; font-size: 13pt; margin-top: 16pt; margin-bottom: 6pt;">
+            III. KIẾN NGHỊ ĐÔN ĐỐC CỦA BAN THƯỜNG TRỰC ỦY BAN MTTQ VIỆT NAM XÃ EA SÚP:
+          </p>
+          <p style="text-align: justify; text-indent: 20pt; margin-bottom: 4pt;">
+            1. Đề nghị Ủy ban nhân dân xã Ea Súp chỉ đạo các cơ quan chuyên môn (Ban Địa chính - Nông nghiệp - Xây dựng & Môi trường; Công an xã; Bộ phận Một cửa...) khẩn trương tiến hành kiểm tra thực tế, xác minh nội dung phản ánh của cử tri thuộc các mảng lĩnh vực nêu trên; đồng thời ban hành văn bản trả lời chính thức đúng thời hạn quy định để công khai cho cử tri được biết.
+          </p>
+          <p style="text-align: justify; text-indent: 20pt; margin-bottom: 4pt;">
+            2. Đối với các vụ việc phức tạp, cần thời gian đo đạc, thẩm định nguồn gốc hoặc vượt thẩm quyền giải quyết của cấp xã, đề nghị UBND xã kịp thời có văn bản xin ý kiến chỉ đạo của UBND huyện Ea Súp và có thông báo tiến độ để cử tri an tâm.
+          </p>
+          <p style="text-align: justify; text-indent: 20pt; margin-bottom: 14pt;">
+            3. Ban Thường trực Ủy ban MTTQ Việt Nam xã sẽ tiếp tục phân công cán bộ phối hợp kiểm tra, giám sát tiến độ giải quyết để thông báo công khai trước cử tri và Nhân dân tại kỳ họp HĐND và các hội nghị tiếp xúc cử tri sắp tới.
+          </p>
+
+          <!-- CHỮ KÝ VÀ NƠI NHẬN THEO ĐÚNG THỂ THỨC NGHỊ ĐỊNH 30/2020/NĐ-CP -->
+          <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 14pt; page-break-inside: avoid;">
+            <tr>
+              <td width="50%" valign="top">
+                <p style="margin: 0; font-size: 12pt; font-weight: bold; font-style: italic;">Nơi nhận:</p>
+                <p style="margin: 0 0 2pt 10pt; font-size: 10.5pt; font-style: italic;">- Như Kính gửi;</p>
+                <p style="margin: 0 0 2pt 10pt; font-size: 10.5pt; font-style: italic;">- Ban TT UBMTTQVN huyện Ea Súp (b/c);</p>
+                <p style="margin: 0 0 2pt 10pt; font-size: 10.5pt; font-style: italic;">- Các Ban ngành, đoàn thể xã;</p>
+                <p style="margin: 0 0 2pt 10pt; font-size: 10.5pt; font-style: italic;">- Ban Công tác Mặt trận 20 thôn, buôn;</p>
+                <p style="margin: 0 0 10pt 10pt; font-size: 10.5pt; font-style: italic;">- Lưu: VT, Ban TT MTTQ.</p>
+
+                <div style="margin-top: 16pt;">
+                  <p style="margin: 0; font-size: 13pt; font-weight: bold; text-align: center;">NGƯỜI LẬP BIỂU</p>
+                  <p style="margin: 0; font-size: 11pt; font-style: italic; text-align: center;">(Ký, ghi rõ họ tên)</p>
+                  <div style="height: 60pt;"></div>
+                </div>
+              </td>
+              <td width="50%" align="center" valign="top">
+                <p style="margin: 0; font-size: 13pt; font-weight: bold; text-transform: uppercase;">TM. BAN THƯỜNG TRỰC</p>
+                <p style="margin: 0; font-size: 13pt; font-weight: bold; text-transform: uppercase;">CHỦ TỊCH / PHÓ CHỦ TỊCH</p>
+                <p style="margin: 0; font-size: 11pt; font-style: italic;">(Ký tên, đóng dấu)</p>
+                <div style="height: 60pt;"></div>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(["\ufeff" + wordContent], {
+      type: "application/msword;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const safePeriodName = periodLabel.replace(/[/\\?%*:|"<>]/g, "_").replace(/\s+/g, "_");
+    const prefix = isUnansweredMode
+      ? "Bao_cao_y_kien_cu_tri_CHUA_TRA_LOI_CONG_KHAI_Xa_Ea_Sup"
+      : reportScope === "ANSWERED"
+      ? "Bao_cao_y_kien_cu_tri_DA_TRA_LOI_CONG_KHAI_Xa_Ea_Sup"
+      : "Bao_cao_tong_hop_y_kien_cu_tri_Xa_Ea_Sup";
+    a.download = `${prefix}_${safePeriodName}_Chuan_ND30.doc`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 60000);
+  };
+
   // IN BÁO CÁO A4 HÀNH CHÍNH
   const handlePrint = () => {
     window.print();
@@ -1306,6 +1589,17 @@ export default function ReportExportModal({
             >
               <Printer className="w-4 h-4 text-amber-300" />
               In báo cáo A4
+            </button>
+
+            {/* Nút Xuất file Word theo đúng thể thức Thông tư 30 / Nghị định 30 của Chính phủ */}
+            <button
+              type="button"
+              onClick={handleExportWord}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold shadow-xs transition cursor-pointer"
+              title="Tải văn bản Word (.doc) đúng thể thức Thông tư 30 / Nghị định 30/2020/NĐ-CP của Chính phủ"
+            >
+              <FileText className="w-4 h-4 text-sky-200" />
+              Xuất file Word (.doc)
             </button>
 
             {/* Nút Xuất file Excel báo cáo nhiều sheet phân theo từng mảng */}

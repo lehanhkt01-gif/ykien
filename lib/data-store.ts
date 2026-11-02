@@ -976,6 +976,42 @@ export async function respondFeedback(data: {
 }
 
 export async function getFeedbackStats(isAdmin: boolean = false) {
+  if (await isDatabaseOnline()) {
+    try {
+      const total = await prisma.voterFeedback.count();
+      const pendingApproval = await prisma.voterFeedback.count({
+        where: {
+          OR: [{ status: "Chờ duyệt" }, { isApproved: false }],
+        },
+      });
+      const answered = await prisma.voterFeedback.count({
+        where: {
+          OR: [
+            { status: "Đã trả lời" },
+            { officialResponse: { isNot: null } },
+          ],
+        },
+      });
+      const processing = Math.max(0, total - pendingApproval - answered);
+      const received = pendingApproval;
+      const resolutionRate =
+        total - pendingApproval > 0
+          ? Math.round((answered / (total - pendingApproval)) * 100)
+          : 0;
+
+      return {
+        total,
+        pendingApproval,
+        received,
+        processing,
+        answered,
+        resolutionRate,
+      };
+    } catch (dbErr) {
+      console.error("Lỗi getFeedbackStats từ CSDL, fallback JSON:", dbErr);
+    }
+  }
+
   const feedbacks = getMemoryFeedbacks();
 
   // 1. Tổng ý kiến tiếp nhận: số tổng bao gồm cả ý kiến đợi duyệt
