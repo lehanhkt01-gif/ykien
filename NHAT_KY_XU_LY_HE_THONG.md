@@ -163,22 +163,27 @@ cd /var/www/ykien.easupso.com && mv data/ratings.json /tmp/ratings.json.bak 2>/d
 
 ---
 
-## 📌 9. BẢNG TỔNG HỢP CÁC TỆP ĐÃ THAY ĐỔI
-| STT | Đường dẫn tệp | Mục đích thay đổi |
-|---|---|---|
-| 1 | `lib/constants.ts` | Cập nhật `"Thôn Thành Công"` ➔ `"Thôn Thắng Lợi"`; đưa `"Đã trả lời"` lên trước `"Đang xác minh, xử lý"` trong `STATUS_LIST`. |
-| 2 | `app/page.tsx` | Hiển thị 2 dòng ý kiến (`line-clamp-2`); gộp Ngày ý kiến dưới Thôn/Buôn; tô đậm nội dung; thu hẹp 1/2 cột cử tri; đưa thẻ "Đã trả lời công khai" lên đầu và ẩn thẻ "Đợi duyệt". |
-| 3 | `initial_data.json` | Cập nhật mã `THON_THANG_LOI`, tên thôn và dữ liệu mẫu phản ánh. |
-| 4 | `app/api/chat/route.ts` | Đồng bộ danh sách 20 thôn buôn trong phản hồi của Trợ lý AI công vụ. |
-| 5 | `app/api/admin/export/route.ts` | Đồng bộ tên Thôn Thắng Lợi; bổ sung lọc xuất theo nội dung (toàn bộ, chưa trả lời, đã trả lời, UBND, MTTQ, ban ngành). |
-| 6 | `app/api/admin/export/[filename]/route.ts` | Đồng bộ tên Thôn Thắng Lợi và tham số lọc xuất file Excel. |
-| 7 | `lib/data-store.ts` | Viết hàm `batchUpdateAnswers()` nạp câu trả lời Excel; cập nhật `getFeedbacksList` đưa hồ sơ đã trả lời lên đầu và đưa hồ sơ đang xử lý (chưa có trả lời) xuống sau cùng. |
-| 8 | `app/api/admin/import/route.ts` | Hỗ trợ tham số `mode === "answers"`, tích hợp `batchUpdateAnswers()` và trích xuất dữ liệu trả lời. |
-| 9 | `app/admin/page.tsx` | Nâng cấp Modal Xuất file (chọn nội dung xuất); Nâng cấp Modal Nhập file (2 chế độ Thêm mới / Nhập câu trả lời kèm khung hiển thị cảnh báo chi tiết). |
-| 10 | `legacy/schema.sql` | Đồng bộ script cơ sở dữ liệu mẫu SQL sang Thôn Thắng Lợi. |
-| 11 | `legacy/db.js` | Đồng bộ tệp cơ sở dữ liệu mẫu JavaScript sang Thôn Thắng Lợi. |
-| 12 | `legacy/index.html` | Đồng bộ dropdown chọn thôn trong tệp HTML tĩnh. |
-| 13 | `NHAT_KY_XU_LY_HE_THONG.md` | Tài liệu lưu trữ chi tiết toàn bộ lịch sử và hướng dẫn hệ thống cho các phiên làm việc tiếp theo. |
+## 📌 10. YÊU CẦU 10: TÙY CHỈNH XUẤT BÁO CÁO CÁC Ý KIẾN CHƯA ĐƯỢC TRẢ LỜI CÔNG KHAI (MỤC ĐANG XÁC MINH XỬ LÝ)
+- **Ngày thực hiện:** 02/11/2026
+- **Nội dung nâng cấp:**
+  1. **Thanh tùy chọn loại báo cáo trong `components/ReportExportModal.tsx`:**
+     - Bổ sung 3 chế độ: `Tất cả ý kiến (Báo cáo tổng hợp)`, **`Chưa được trả lời công khai (Đang xác minh, xử lý)`**, `Đã trả lời công khai`.
+     - 4 thẻ số liệu tổng quan (Tổng số, Đã trả lời, Chưa trả lời công khai/Đang xác minh xử lý, Chờ tiếp nhận) có thể nhấp trực tiếp để chuyển nhanh chế độ xem báo cáo.
+  2. **Thể thức báo cáo hành chính chuẩn MTTQ Việt Nam Xã Ea Súp:**
+     - Quốc hiệu, Tiêu ngữ, Tên cơ quan ban hành: *Ủy ban MTTQ Việt Nam xã Ea Súp - Ban Thường trực*, Số: ..... /BC-MTTQ-BTT.
+     - Tiêu đề: *Báo cáo tổng hợp các ý kiến, kiến nghị của cử tri chưa được trả lời công khai (Hiện đang trong quá trình thẩm tra, xác minh và xử lý)*.
+     - Nơi gửi: Thường trực Đảng ủy, Thường trực HĐND, UBND xã Ea Súp.
+     - Lời dẫn nhập và các điểm kiến nghị đôn đốc UBND xã chỉ đạo các cơ quan chuyên môn khẩn trương giải quyết.
+     - Phần chữ ký Người lập biểu và TM. Ban Thường trực - Chủ tịch / Phó Chủ tịch (ký tên, đóng dấu); Nơi nhận đầy đủ theo quy định.
+  3. **Báo cáo chi tiết nội dung ý kiến được phân theo từng mảng (lĩnh vực):**
+     - Gom nhóm theo từng mảng: MẢNG I, MẢNG II, MẢNG III... (kèm tổng số ý kiến trong mảng).
+     - Bảng chi tiết đầy đủ các cột: STT, Tên người ý kiến (Cử tri, số điện thoại, mã hồ sơ), Tên thôn/buôn, Nội dung chi tiết của ý kiến cử tri (hiển thị trọn vẹn, không cắt ngắn), Ngày tiếp nhận, Đơn vị chủ trì phối hợp và Tình trạng xác minh.
+  4. **Xuất file Excel (.xlsx) thông minh:**
+     - Sheet 1: `TongHop_TheoMang` - Thống kê số lượng, tỷ lệ % và đơn vị xác minh theo từng mảng.
+     - Sheet 2: `ChiTiet_TheoTungMang` - Toàn bộ danh sách hồ sơ được phân nhóm theo từng mảng, đầy đủ 13 cột chi tiết.
+  5. **In ấn báo cáo A4 (`app/globals.css`):**
+     - Chuẩn hóa CSS `@media print` cho khổ A4 dọc, không bị vỡ bố cục, tránh cắt trang giữa dòng bảng.
+
 
 
 

@@ -16,14 +16,50 @@ body {
 
 /* Hiệu ứng in ấn báo cáo chuẩn công vụ */
 @media print {
-  header, footer, .no-print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm 12mm 15mm 15mm;
+  }
+  header, footer, nav, aside, .no-print {
     display: none !important;
   }
   .print-only {
     display: block !important;
   }
-  body {
+  body, html {
     background: white !important;
     color: black !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+  /* Hiển thị báo cáo trọn vẹn khi in từ modal */
+  .fixed.inset-0 {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .printable-report {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+    font-family: "Times New Roman", Times, serif, system-ui;
+  }
+  .avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
   }
 }
